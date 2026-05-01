@@ -10,9 +10,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
-from src.capture import capture_snapshot
-from src.config import hash_password, load_config, save_config, verify_password
-from src.uploader import upload_image
+from capture import capture_snapshot
+from config import hash_password, load_config, save_config, verify_password
+from uploader import upload_image
 
 app = FastAPI(title="Camera Uploader")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
