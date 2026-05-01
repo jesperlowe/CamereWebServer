@@ -9,7 +9,8 @@ User=camera-uploader
 Group=camera-uploader
 WorkingDirectory=/opt/camera-uploader
 Environment=CAMERA_UPLOADER_CONFIG=/opt/camera-uploader/config.json
-ExecStart=/opt/camera-uploader/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8080
+Environment=PYTHONPATH=/opt/camera-uploader
+ExecStart=/opt/camera-uploader/venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8080
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

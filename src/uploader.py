@@ -5,7 +5,7 @@ from pathlib import PurePosixPath
 import httpx
 import paramiko
 
-from config import AppConfig
+from src.config import AppConfig
 
 logger = logging.getLogger("camera_uploader")
 
