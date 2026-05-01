@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "username": "admin",
+    "password_hash": "<bcrypt hash>",
+    "force_password_change": true
+  },
+  "camera": {
+    "rtsp_url": "rtsps://camera.example/live",
+    "capture_interval_minutes": 15
+  },
+  "upload": {
+    "method": "sftp",
+    "sftp": {
+      "host": "example.com",
+      "port": 22,
+      "username": "uploader",
+      "password": "",
+      "private_key_path": "",
+      "remote_path": "/public_html/camera/latest.jpg"
+    },
+    "wordpress": {
+      "endpoint": "https://site.example/wp-json/camera-snapshot/v1/upload",
+      "bearer_token": ""
+    }
+  }
+}
