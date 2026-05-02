@@ -1,1 +1,91 @@
-<!doctype html><html><body><h1>Dashboard</h1><p>Status: Kører</p><p>Seneste upload: {{state.last_upload}}</p><p>Seneste fejl: {{state.last_error}}</p>{% if force %}<form method='post' action='/change-password'><input type='password' name='password' placeholder='Nyt password'><button>Skift password</button></form>{% endif %}<form method='post' action='/test-camera'><button>Test kamera</button></form><form method='post' action='/upload-test'><button>Upload testbillede</button></form><img src='/test-image' style='max-width:100%'><p><a href='/camera'>Kameraopsætning</a> | <a href='/upload'>Uploadopsætning</a> | <a href='/logs'>Logs</a></p></body></html>
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+{% if force %}
+<div class="card" style="border-color:rgba(239,68,68,0.4);margin-bottom:24px;">
+  <div class="card-title" style="color:#ef4444;border-color:rgba(239,68,68,0.2);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    Skift adgangskode
+  </div>
+  <p style="font-size:0.88rem;color:#94a3b8;margin-bottom:16px;">
+    Du bruger standardadgangskoden. Skift den nu for at sikre din installation.
+  </p>
+  <form method="post" action="/change-password">
+    <div class="field">
+      <label for="new-password">Ny adgangskode</label>
+      <input type="password" id="new-password" name="password"
+             placeholder="Mindst 8 tegn" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Gem ny adgangskode</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+    </svg>
+    Status
+  </div>
+
+  <div class="status-row">
+    <span class="status-label">Tjeneste</span>
+    <span class="status-value ok">Kører</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Seneste upload</span>
+    <span class="status-value">{{ state.last_upload or '—' }}</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Seneste fejl</span>
+    <span class="status-value {% if state.last_error and state.last_error != '-' %}err{% endif %}">
+      {{ state.last_error or '—' }}
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    Kameratest
+  </div>
+  <p style="font-size:0.88rem;color:#64748b;margin-bottom:16px;">
+    Tag et testbillede fra RTSP-strømmen og send det til den konfigurerede uploaddestination.
+  </p>
+
+  <div class="action-row">
+    <form method="post" action="/test-camera">
+      <button type="submit" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Tag testbillede
+      </button>
+    </form>
+    <form method="post" action="/upload-test">
+      <button type="submit" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload testbillede
+      </button>
+    </form>
+  </div>
+
+  {% if state.last_test_image %}
+  <img src="/test-image" alt="Seneste testbillede" class="preview-img">
+  {% endif %}
+</div>
+
+{% endblock %}
