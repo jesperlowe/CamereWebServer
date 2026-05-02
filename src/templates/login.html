@@ -1,1 +1,50 @@
-<!doctype html><html><body><h2>Login</h2>{% if error %}<p>{{error}}</p>{% endif %}<form method='post'><input name='username'><input type='password' name='password'><button>Login</button></form></body></html>
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — Camera Uploader</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      <h1>Camera Uploader</h1>
+      <p>Log ind for at fortsætte</p>
+    </div>
+
+    {% if error %}
+    <div class="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login">
+      <div class="field">
+        <label for="username">Brugernavn</label>
+        <input type="text" id="username" name="username"
+               placeholder="admin" autocomplete="username" required>
+      </div>
+
+      <div class="field" style="margin-bottom:24px;">
+        <label for="password">Adgangskode</label>
+        <input type="password" id="password" name="password"
+               placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+        Log ind
+      </button>
+    </form>
+
+  </div>
+</div>
+
+</body>
+</html>

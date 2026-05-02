@@ -1,1 +1,52 @@
-<!doctype html><html><body><h2>Kameraopsætning</h2><form method='post'><input name='rtsp_url' value='{{cfg.camera.rtsp_url}}' placeholder='RTSP URL'><input name='interval' type='number' value='{{cfg.camera.capture_interval_minutes}}'><button>Gem</button></form><a href='/'>Tilbage</a></body></html>
+{% extends "base.html" %}
+{% block title %}Kameraopsætning{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    Kameraopsætning
+  </div>
+
+  <form method="post" action="/camera">
+
+    <div class="field">
+      <label for="rtsp_url">
+        RTSP-stream URL
+        <span class="hint">Adresse til kameraets RTSP- eller RTSPS-stream</span>
+      </label>
+      <input type="text" id="rtsp_url" name="rtsp_url"
+             value="{{ cfg.camera.rtsp_url }}"
+             placeholder="rtsp://bruger:kode@192.168.1.100:554/stream"
+             autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="interval">
+        Optagelsesinterval
+        <span class="hint">Antal minutter mellem automatiske snapshots (minimum 1)</span>
+      </label>
+      <input type="number" id="interval" name="interval"
+             value="{{ cfg.camera.capture_interval_minutes }}"
+             min="1" max="1440"
+             style="max-width:160px;">
+    </div>
+
+    <div class="action-row">
+      <button type="submit" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Gem indstillinger
+      </button>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}

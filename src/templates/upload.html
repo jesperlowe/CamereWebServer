@@ -1,1 +1,135 @@
-<!doctype html><html><body><h2>Uploadopsætning</h2><form method='post'><select name='method'><option value='sftp'>SFTP</option><option value='wordpress'>WordPress</option></select><h3>SFTP</h3><input name='sftp_host' value='{{cfg.upload.sftp.host}}' placeholder='Host'><input name='sftp_port' value='{{cfg.upload.sftp.port}}'><input name='sftp_username' value='{{cfg.upload.sftp.username}}'><input type='password' name='sftp_password' placeholder='Ny password'><input name='sftp_key' value='{{cfg.upload.sftp.private_key_path}}'><input name='sftp_remote_path' value='{{cfg.upload.sftp.remote_path}}'><h3>WordPress</h3><input name='wp_endpoint' value='{{cfg.upload.wordpress.endpoint}}'><input type='password' name='wp_token' placeholder='Nyt token'><button>Gem</button></form><a href='/'>Tilbage</a></body></html>
+{% extends "base.html" %}
+{% block title %}Uploadopsætning{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    Uploadopsætning
+  </div>
+
+  <form method="post" action="/upload">
+
+    <div class="field">
+      <label for="method">Upload-metode</label>
+      <select id="method" name="method" onchange="toggleMethod(this.value)">
+        <option value="sftp"      {% if cfg.upload.method == 'sftp'      %}selected{% endif %}>SFTP</option>
+        <option value="wordpress" {% if cfg.upload.method == 'wordpress' %}selected{% endif %}>WordPress REST API</option>
+      </select>
+    </div>
+
+    <!-- ── SFTP ── -->
+    <div id="section-sftp">
+      <div class="section-heading">SFTP-forbindelse</div>
+
+      <div style="display:grid;grid-template-columns:1fr 100px;gap:16px;">
+        <div class="field">
+          <label for="sftp_host">
+            Server (host)
+            <span class="hint">IP-adresse eller hostname</span>
+          </label>
+          <input type="text" id="sftp_host" name="sftp_host"
+                 value="{{ cfg.upload.sftp.host }}"
+                 placeholder="192.168.1.50 eller ftp.example.com">
+        </div>
+        <div class="field">
+          <label for="sftp_port">
+            Port
+            <span class="hint">Standard: 22</span>
+          </label>
+          <input type="number" id="sftp_port" name="sftp_port"
+                 value="{{ cfg.upload.sftp.port }}"
+                 min="1" max="65535">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="sftp_username">
+          Brugernavn
+          <span class="hint">SSH-bruger på fjernserveren</span>
+        </label>
+        <input type="text" id="sftp_username" name="sftp_username"
+               value="{{ cfg.upload.sftp.username }}"
+               placeholder="deploy" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="sftp_password">
+          Adgangskode
+          <span class="hint">Lad feltet være tomt for at beholde den gemte adgangskode</span>
+        </label>
+        <input type="password" id="sftp_password" name="sftp_password"
+               placeholder="••••••••" autocomplete="new-password">
+      </div>
+
+      <div class="field">
+        <label for="sftp_key">
+          Sti til privat SSH-nøgle
+          <span class="hint">Valgfrit — bruges i stedet for adgangskode</span>
+        </label>
+        <input type="text" id="sftp_key" name="sftp_key"
+               value="{{ cfg.upload.sftp.private_key_path }}"
+               placeholder="/home/pi/.ssh/id_rsa">
+      </div>
+
+      <div class="field">
+        <label for="sftp_remote_path">
+          Fjernsti (remote path)
+          <span class="hint">Fuld sti inkl. filnavn på serveren</span>
+        </label>
+        <input type="text" id="sftp_remote_path" name="sftp_remote_path"
+               value="{{ cfg.upload.sftp.remote_path }}"
+               placeholder="/public_html/camera/latest.jpg">
+      </div>
+    </div>
+
+    <!-- ── WordPress ── -->
+    <div id="section-wordpress" style="display:none;">
+      <div class="section-heading">WordPress REST API</div>
+
+      <div class="field">
+        <label for="wp_endpoint">
+          API-endpoint URL
+          <span class="hint">URL til WordPress media-endpoint på din server</span>
+        </label>
+        <input type="text" id="wp_endpoint" name="wp_endpoint"
+               value="{{ cfg.upload.wordpress.endpoint }}"
+               placeholder="https://example.com/wp-json/tsls/v1/upload-image">
+      </div>
+
+      <div class="field">
+        <label for="wp_token">
+          Bearer-token
+          <span class="hint">Lad feltet være tomt for at beholde det gemte token</span>
+        </label>
+        <input type="password" id="wp_token" name="wp_token"
+               placeholder="••••••••" autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="action-row" style="margin-top:24px;">
+      <button type="submit" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Gem indstillinger
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function toggleMethod(val) {
+  document.getElementById('section-sftp').style.display      = val === 'sftp'      ? '' : 'none';
+  document.getElementById('section-wordpress').style.display = val === 'wordpress' ? '' : 'none';
+}
+toggleMethod(document.getElementById('method').value);
+</script>
+
+{% endblock %}
