@@ -14,7 +14,7 @@ CONFIG_PATH = Path(os.environ.get("CAMERA_UPLOADER_CONFIG", "/opt/camera-uploade
 @dataclass
 class AuthConfig:
     username: str = "admin"
-    password_hash: str = pwd_context.hash("admin")
+    password_hash: str = field(default_factory=lambda: hash_password("admin"))
     force_password_change: bool = True
 
 
