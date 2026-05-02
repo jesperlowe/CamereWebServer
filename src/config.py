@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Optional
 
 import bcrypt
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 CONFIG_PATH = Path(os.environ.get("CAMERA_UPLOADER_CONFIG", "/opt/camera-uploader/config.json"))
 
