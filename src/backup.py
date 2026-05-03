@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.config import (
-    AppConfig, AuthConfig, CameraConfig, NtpConfig,
+    AppConfig, AuthConfig, NtpConfig,
     SFTPConfig, UploadConfig, WordpressConfig,
     load_config,
 )
