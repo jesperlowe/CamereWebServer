@@ -6,86 +6,111 @@
 {% if force %}
 <div class="card" style="border-color:rgba(239,68,68,0.4);margin-bottom:24px;">
   <div class="card-title" style="color:#ef4444;border-color:rgba(239,68,68,0.2);">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4444;">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
     Skift adgangskode
   </div>
-  <p style="font-size:0.88rem;color:#94a3b8;margin-bottom:16px;">
-    Du bruger standardadgangskoden. Skift den nu for at sikre din installation.
-  </p>
+  <p style="font-size:0.88rem;color:#94a3b8;margin-bottom:16px;">Du bruger standardadgangskoden — skift den nu.</p>
   <form method="post" action="/change-password">
     <div class="field">
       <label for="new-password">Ny adgangskode</label>
-      <input type="password" id="new-password" name="password"
-             placeholder="Mindst 8 tegn" autocomplete="new-password" required>
+      <input type="password" id="new-password" name="password" placeholder="Mindst 8 tegn" autocomplete="new-password" required>
     </div>
     <button type="submit" class="btn btn-primary">Gem ny adgangskode</button>
   </form>
 </div>
 {% endif %}
 
+<!-- Mørketid-banner -->
+{% if state.dark %}
+<div class="alert" style="background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.3);color:#fbbf24;margin-bottom:20px;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+  Mørketid aktiv: {{ state.dark_reason }} — automatisk optagelse er sat på pause.
+</div>
+{% endif %}
+
+<!-- Systemstatus -->
 <div class="card">
   <div class="card-title">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
     </svg>
-    Status
+    Systemstatus
   </div>
-
   <div class="status-row">
     <span class="status-label">Tjeneste</span>
     <span class="status-value ok">Kører</span>
   </div>
+  {% if state.ntp %}
   <div class="status-row">
-    <span class="status-label">Seneste upload</span>
-    <span class="status-value">{{ state.last_upload or '—' }}</span>
+    <span class="status-label">NTP ({{ state.ntp.server }})</span>
+    {% if state.ntp.ok %}
+    <span class="status-value ok">Synkroniseret · offset {{ state.ntp.offset_sec }}s</span>
+    {% else %}
+    <span class="status-value err">Fejl: {{ state.ntp.error }}</span>
+    {% endif %}
   </div>
+  {% endif %}
   <div class="status-row">
-    <span class="status-label">Seneste fejl</span>
-    <span class="status-value {% if state.last_error and state.last_error != '-' %}err{% endif %}">
-      {{ state.last_error or '—' }}
+    <span class="status-label">Mørketid</span>
+    <span class="status-value {% if state.dark %}err{% else %}ok{% endif %}">
+      {% if state.dark %}Aktiv — {{ state.dark_reason }}{% else %}Inaktiv{% endif %}
     </span>
   </div>
 </div>
 
+<!-- Kameraer -->
+{% for cam in cameras %}
+{% set cam_id = cam.id %}
+{% set cam_state = state.cameras.get(cam_id, {}) %}
 <div class="card">
   <div class="card-title">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
       <circle cx="12" cy="13" r="4"/>
     </svg>
-    Kameratest
+    {{ cam.name }}
+    {% if not cam.enabled %}
+    <span style="font-size:0.72rem;font-weight:400;color:var(--muted);margin-left:8px;">(deaktiveret)</span>
+    {% endif %}
   </div>
-  <p style="font-size:0.88rem;color:#64748b;margin-bottom:16px;">
-    Tag et testbillede fra RTSP-strømmen og send det til den konfigurerede uploaddestination.
-  </p>
+
+  <div class="status-row">
+    <span class="status-label">Filnavn</span>
+    <span class="status-value" style="font-family:monospace;font-size:0.85rem;">{{ cam.filename }}</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Seneste upload</span>
+    <span class="status-value">{{ cam_state.get('last_upload') or '—' }}</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">Seneste fejl</span>
+    <span class="status-value {% if cam_state.get('last_error') and cam_state.get('last_error') != '-' %}err{% endif %}">
+      {{ cam_state.get('last_error') or '—' }}
+    </span>
+  </div>
 
   <div class="action-row">
-    <form method="post" action="/test-camera">
-      <button type="submit" class="btn btn-secondary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-          <circle cx="12" cy="13" r="4"/>
-        </svg>
-        Tag testbillede
-      </button>
+    <form method="post" action="/cameras/{{ cam_id }}/test">
+      <button type="submit" class="btn btn-secondary">Test snapshot</button>
     </form>
-    <form method="post" action="/upload-test">
-      <button type="submit" class="btn btn-primary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        Upload testbillede
-      </button>
+    <form method="post" action="/cameras/{{ cam_id }}/upload-test">
+      <button type="submit" class="btn btn-primary">Upload snapshot</button>
     </form>
   </div>
 
-  {% if state.last_test_image %}
-  <img src="/test-image" alt="Seneste testbillede" class="preview-img">
+  {% if cam_state.get('last_image') %}
+  <img src="/test-image/{{ cam_id }}" alt="Snapshot {{ cam.name }}" class="preview-img">
   {% endif %}
 </div>
+{% else %}
+<div class="card">
+  <p style="color:var(--muted);font-size:0.9rem;">Ingen kameraer opsat endnu. <a href="/cameras" style="color:var(--accent);">Tilføj et kamera →</a></p>
+</div>
+{% endfor %}
 
 {% endblock %}

@@ -79,13 +79,13 @@
       </div>
 
       <div class="field">
-        <label for="sftp_remote_path">
-          Fjernsti (remote path)
-          <span class="hint">Fuld sti inkl. filnavn på serveren</span>
+        <label for="remote_dir">
+          Mappe på server (remote dir)
+          <span class="hint">Kun mappen — hvert kamera tilføjer sit eget filnavn</span>
         </label>
-        <input type="text" id="sftp_remote_path" name="sftp_remote_path"
-               value="{{ cfg.upload.sftp.remote_path }}"
-               placeholder="/public_html/camera/latest.jpg">
+        <input type="text" id="remote_dir" name="remote_dir"
+               value="{{ cfg.upload.sftp.remote_dir }}"
+               placeholder="/public_html/camera">
       </div>
     </div>
 
