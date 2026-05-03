@@ -4,12 +4,13 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
+from src.backup import config_to_xml, xml_to_config
 from src.capture import capture_snapshot
 from src.config import MAX_CAMERAS, WEEKDAYS, hash_password, load_config, save_config, verify_password
 from src.ntp_sync import check_ntp
@@ -341,6 +342,47 @@ def delete_dark_period(request: Request, period_id: int):
     cfg.dark_periods = [p for p in cfg.dark_periods if p.get("id") != period_id]
     save_config(cfg)
     return RedirectResponse("/schedule", status_code=302)
+
+
+# ── Backup / Restore ──────────────────────────────────────────────────────────
+
+@app.get("/backup")
+def backup_page(request: Request):
+    _require_auth(request)
+    return templates.TemplateResponse("backup.html", {"request": request})
+
+
+@app.get("/backup/download")
+def backup_download(request: Request):
+    _require_auth(request)
+    cfg = load_config()
+    xml_bytes = config_to_xml(cfg)
+    filename = datetime.now().strftime("backup_%Y%m%d_%H%M%S.xml")
+    return Response(
+        content=xml_bytes,
+        media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/backup/restore")
+async def backup_restore(request: Request, file: UploadFile = File(...)):
+    _require_auth(request)
+    content = await file.read()
+    try:
+        cfg = xml_to_config(content)
+        save_config(cfg)
+        logger.info("Konfiguration genoprettet fra XML-backup.")
+        return templates.TemplateResponse("backup.html", {
+            "request": request,
+            "success": "Konfigurationen er genoprettet. Genstart tjenesten hvis scheduleren ikke reagerer.",
+        })
+    except Exception as exc:
+        logger.error("Backup-gendannelse fejlede: %s", exc)
+        return templates.TemplateResponse("backup.html", {
+            "request": request,
+            "error": f"Kunne ikke læse backup-filen: {exc}",
+        })
 
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
