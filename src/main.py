@@ -19,10 +19,17 @@ from src.uploader import upload_image
 app = FastAPI(title="Camera Uploader")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 templates = Jinja2Templates(directory="src/templates")
-secret = URLSafeSerializer("camera-uploader-secret")
 
+def _get_serializer() -> URLSafeSerializer:
+    """Load session secret from config so each installation has a unique key."""
+    return URLSafeSerializer(load_config().auth.session_secret)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger("camera_uploader")
-logging.basicConfig(level=logging.INFO)
 log_buffer = deque(maxlen=200)
 
 # Per-camera state keyed by camera id
@@ -50,7 +57,7 @@ def _authed(request: Request) -> bool:
     if not token:
         return False
     try:
-        return bool(secret.loads(token).get("u"))
+        return bool(_get_serializer().loads(token).get("u"))
     except Exception:
         return False
 
@@ -73,7 +80,12 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     if username != cfg.auth.username or not verify_password(password, cfg.auth.password_hash):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Forkert login"})
     resp = RedirectResponse("/", status_code=302)
-    resp.set_cookie("session", secret.dumps({"u": username}), httponly=True)
+    resp.set_cookie(
+        "session",
+        _get_serializer().dumps({"u": username}),
+        httponly=True,
+        samesite="strict",
+    )
     return resp
 
 

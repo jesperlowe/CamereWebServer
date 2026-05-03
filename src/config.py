@@ -1,5 +1,6 @@
 import json
 import os
+import secrets
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 
@@ -25,6 +26,7 @@ class AuthConfig:
     username: str = "admin"
     password_hash: str = field(default_factory=lambda: hash_password("admin"))
     force_password_change: bool = True
+    session_secret: str = field(default_factory=lambda: secrets.token_hex(32))
 
 
 @dataclass
