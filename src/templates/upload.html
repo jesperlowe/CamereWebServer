@@ -16,21 +16,23 @@
 
     <div class="field">
       <label for="method">Upload-metode</label>
-      <select id="method" name="method" onchange="toggleMethod(this.value)">
-        <option value="sftp"      {% if cfg.upload.method == 'sftp'      %}selected{% endif %}>SFTP</option>
+      <select id="method" name="method" onchange="onMethodChange(this.value)">
+        <option value="ftp"       {% if cfg.upload.method == 'ftp'       %}selected{% endif %}>FTP</option>
+        <option value="ftps"      {% if cfg.upload.method == 'ftps'      %}selected{% endif %}>FTPS (FTP over TLS)</option>
+        <option value="sftp"      {% if cfg.upload.method == 'sftp'      %}selected{% endif %}>SFTP (SSH)</option>
         <option value="wordpress" {% if cfg.upload.method == 'wordpress' %}selected{% endif %}>WordPress REST API</option>
       </select>
     </div>
 
-    <!-- ── SFTP ── -->
-    <div id="section-sftp">
-      <div class="section-heading">SFTP-forbindelse</div>
+    <!-- ── FTP / FTPS / SFTP ── -->
+    <div id="section-filetransfer">
+      <div class="section-heading" id="filetransfer-heading">FTP-forbindelse</div>
 
-      <div style="display:grid;grid-template-columns:1fr 100px;gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr 110px;gap:16px;">
         <div class="field">
           <label for="sftp_host">
             Server (host)
-            <span class="hint">IP-adresse eller hostname</span>
+            <span class="hint">IP-adresse eller hostname på serveren</span>
           </label>
           <input type="text" id="sftp_host" name="sftp_host"
                  value="{{ cfg.upload.sftp.host }}"
@@ -39,7 +41,7 @@
         <div class="field">
           <label for="sftp_port">
             Port
-            <span class="hint">Standard: 22</span>
+            <span class="hint" id="port-hint">Standard: 21</span>
           </label>
           <input type="number" id="sftp_port" name="sftp_port"
                  value="{{ cfg.upload.sftp.port }}"
@@ -50,11 +52,11 @@
       <div class="field">
         <label for="sftp_username">
           Brugernavn
-          <span class="hint">SSH-bruger på fjernserveren</span>
+          <span class="hint">Brugernavn på fjernserveren</span>
         </label>
         <input type="text" id="sftp_username" name="sftp_username"
                value="{{ cfg.upload.sftp.username }}"
-               placeholder="deploy" autocomplete="off">
+               placeholder="ftpbruger" autocomplete="off">
       </div>
 
       <div class="field">
@@ -66,10 +68,10 @@
                placeholder="••••••••" autocomplete="new-password">
       </div>
 
-      <div class="field">
+      <div class="field" id="field-ssh-key" style="display:none;">
         <label for="sftp_key">
           Sti til privat SSH-nøgle
-          <span class="hint">Valgfrit — bruges i stedet for adgangskode</span>
+          <span class="hint">Kun til SFTP — bruges i stedet for adgangskode</span>
         </label>
         <input type="text" id="sftp_key" name="sftp_key"
                value="{{ cfg.upload.sftp.private_key_path }}"
@@ -94,7 +96,7 @@
       <div class="field">
         <label for="wp_endpoint">
           API-endpoint URL
-          <span class="hint">URL til WordPress media-endpoint på din server</span>
+          <span class="hint">URL til WordPress upload-endpoint</span>
         </label>
         <input type="text" id="wp_endpoint" name="wp_endpoint"
                value="{{ cfg.upload.wordpress.endpoint }}"
@@ -125,11 +127,33 @@
 </div>
 
 <script>
-function toggleMethod(val) {
-  document.getElementById('section-sftp').style.display      = val === 'sftp'      ? '' : 'none';
-  document.getElementById('section-wordpress').style.display = val === 'wordpress' ? '' : 'none';
+const METHOD_CONFIG = {
+  ftp:       { heading: 'FTP-forbindelse',        portHint: 'Standard: 21', port: 21,  sshKey: false },
+  ftps:      { heading: 'FTPS-forbindelse (TLS)', portHint: 'Standard: 21', port: 21,  sshKey: false },
+  sftp:      { heading: 'SFTP-forbindelse (SSH)', portHint: 'Standard: 22', port: 22,  sshKey: true  },
+  wordpress: { heading: '',                        portHint: '',             port: null, sshKey: false },
+};
+
+function onMethodChange(val) {
+  const cfg = METHOD_CONFIG[val] || {};
+  const isFileTransfer = val !== 'wordpress';
+
+  document.getElementById('section-filetransfer').style.display = isFileTransfer ? '' : 'none';
+  document.getElementById('section-wordpress').style.display    = isFileTransfer ? 'none' : '';
+
+  if (isFileTransfer) {
+    document.getElementById('filetransfer-heading').textContent = cfg.heading || '';
+    document.getElementById('port-hint').textContent = cfg.portHint || '';
+    document.getElementById('field-ssh-key').style.display = cfg.sshKey ? '' : 'none';
+
+    const portField = document.getElementById('sftp_port');
+    if (portField && portField.value == '' || portField.value == '22' || portField.value == '21') {
+      if (cfg.port) { portField.value = cfg.port; }
+    }
+  }
 }
-toggleMethod(document.getElementById('method').value);
+
+onMethodChange(document.getElementById('method').value);
 </script>
 
 {% endblock %}

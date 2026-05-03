@@ -1,3 +1,4 @@
+import ftplib
 import io
 import logging
 from pathlib import PurePosixPath
@@ -26,6 +27,29 @@ def upload_sftp(image_bytes: bytes, cfg: AppConfig) -> None:
         transport.close()
 
 
+def upload_ftp(image_bytes: bytes, cfg: AppConfig) -> None:
+    s = cfg.upload.sftp
+    remote_path = PurePosixPath(s.remote_path)
+    with ftplib.FTP() as ftp:
+        ftp.connect(s.host, s.port or 21, timeout=20)
+        ftp.login(s.username, s.password)
+        logger.info("FTP forbundet til %s", s.host)
+        ftp.storbinary(f"STOR {remote_path}", io.BytesIO(image_bytes))
+        logger.info("FTP upload fuldført: %s", remote_path)
+
+
+def upload_ftps(image_bytes: bytes, cfg: AppConfig) -> None:
+    s = cfg.upload.sftp
+    remote_path = PurePosixPath(s.remote_path)
+    with ftplib.FTP_TLS() as ftp:
+        ftp.connect(s.host, s.port or 21, timeout=20)
+        ftp.login(s.username, s.password)
+        ftp.prot_p()  # krypteret datakanal
+        logger.info("FTPS forbundet til %s", s.host)
+        ftp.storbinary(f"STOR {remote_path}", io.BytesIO(image_bytes))
+        logger.info("FTPS upload fuldført: %s", remote_path)
+
+
 def upload_wordpress(image_bytes: bytes, cfg: AppConfig) -> None:
     wp = cfg.upload.wordpress
     headers = {
@@ -37,9 +61,14 @@ def upload_wordpress(image_bytes: bytes, cfg: AppConfig) -> None:
 
 
 def upload_image(image_bytes: bytes, cfg: AppConfig) -> None:
-    if cfg.upload.method == "sftp":
+    method = cfg.upload.method
+    if method == "sftp":
         upload_sftp(image_bytes, cfg)
-    elif cfg.upload.method == "wordpress":
+    elif method == "ftp":
+        upload_ftp(image_bytes, cfg)
+    elif method == "ftps":
+        upload_ftps(image_bytes, cfg)
+    elif method == "wordpress":
         upload_wordpress(image_bytes, cfg)
     else:
-        raise RuntimeError("Ukendt uploadmetode")
+        raise RuntimeError(f"Ukendt uploadmetode: {method!r}")
