@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
@@ -231,17 +231,38 @@ def test_image(request: Request, cam_id: int):
     return Response(content=img, media_type="image/jpeg")
 
 
+# ── Public API (no auth) ──────────────────────────────────────────────────────
+
+@app.get("/api/cameras")
+def api_cameras():
+    """Public endpoint — returns camera list with computed public image URLs."""
+    cfg = load_config()
+    base = cfg.upload.public_base_url.rstrip("/")
+    result = []
+    for cam in cfg.cameras:
+        filename = cam.get("filename", "")
+        result.append({
+            "id":         cam.get("id"),
+            "name":       cam.get("name", ""),
+            "filename":   filename,
+            "public_url": f"{base}/{filename}" if base and filename else "",
+        })
+    return JSONResponse(result)
+
+
 # ── Upload settings ───────────────────────────────────────────────────────────
 
 @app.get("/upload")
 def upload_page(request: Request):
     _require_auth(request)
-    return templates.TemplateResponse("upload.html", {"request": request, "cfg": load_config()})
+    cfg = load_config()
+    return templates.TemplateResponse("upload.html", {"request": request, "cfg": cfg, "cameras": cfg.cameras})
 
 
 @app.post("/upload")
 def save_upload(request: Request,
                 method: str = Form(...),
+                public_base_url: str = Form(""),
                 sftp_host: str = Form(""),
                 sftp_port: int = Form(21),
                 sftp_username: str = Form(""),
@@ -253,6 +274,7 @@ def save_upload(request: Request,
     _require_auth(request)
     cfg = load_config()
     cfg.upload.method             = method
+    cfg.upload.public_base_url    = public_base_url.strip()
     cfg.upload.sftp.host          = sftp_host
     cfg.upload.sftp.port          = sftp_port
     cfg.upload.sftp.username      = sftp_username

@@ -113,6 +113,44 @@
       </div>
     </div>
 
+    <!-- ── Offentlig URL (Synergi) ── -->
+    <div class="section-heading">Offentlig adgang</div>
+    <div class="field">
+      <label for="public_base_url">
+        Offentlig basis-URL
+        <span class="hint">Rod-URL hvor billederne er tilgængelige — bruges til Synergi-integration</span>
+      </label>
+      <input type="text" id="public_base_url" name="public_base_url"
+             value="{{ cfg.upload.public_base_url }}"
+             placeholder="https://example.com/camera">
+    </div>
+
+    {% if cfg.upload.public_base_url %}
+    <div class="section-heading">Beregnede kamera-URL'er</div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.86rem;margin-bottom:16px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Kamera</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Offentlig URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cam in cameras %}
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">{{ cam.name }}</td>
+          <td style="padding:8px;font-family:monospace;font-size:0.82rem;word-break:break-all;">
+            <a href="{{ cfg.upload.public_base_url.rstrip('/') }}/{{ cam.filename }}"
+               target="_blank" rel="noopener"
+               style="color:var(--accent);">
+              {{ cfg.upload.public_base_url.rstrip('/') }}/{{ cam.filename }}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
     <div class="action-row" style="margin-top:24px;">
       <button type="submit" class="btn btn-primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

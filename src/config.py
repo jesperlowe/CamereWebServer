@@ -48,6 +48,7 @@ class WordpressConfig:
 @dataclass
 class UploadConfig:
     method: str = "ftp"
+    public_base_url: str = ""
     sftp: SFTPConfig = field(default_factory=SFTPConfig)
     wordpress: WordpressConfig = field(default_factory=WordpressConfig)
 
@@ -114,6 +115,7 @@ def load_config() -> AppConfig:
         capture_interval_minutes=data.get("capture_interval_minutes", 15),
         upload=UploadConfig(
             method=data.get("upload", {}).get("method", "ftp"),
+            public_base_url=data.get("upload", {}).get("public_base_url", ""),
             sftp=SFTPConfig(**sftp_data),
             wordpress=WordpressConfig(**data.get("upload", {}).get("wordpress", {})),
         ),
