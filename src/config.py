@@ -1,12 +1,16 @@
 import json
 import os
+import secrets
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
-from typing import Optional
 
 import bcrypt
 
 CONFIG_PATH = Path(os.environ.get("CAMERA_UPLOADER_CONFIG", "/opt/camera-uploader/config.json"))
+
+MAX_CAMERAS = 5
+
+WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
 def hash_password(password: str) -> str:
@@ -22,22 +26,17 @@ class AuthConfig:
     username: str = "admin"
     password_hash: str = field(default_factory=lambda: hash_password("admin"))
     force_password_change: bool = True
-
-
-@dataclass
-class CameraConfig:
-    rtsp_url: str = ""
-    capture_interval_minutes: int = 15
+    session_secret: str = field(default_factory=lambda: secrets.token_hex(32))
 
 
 @dataclass
 class SFTPConfig:
     host: str = ""
-    port: int = 22
+    port: int = 21
     username: str = ""
     password: str = ""
     private_key_path: str = ""
-    remote_path: str = "/public_html/camera/latest.jpg"
+    remote_dir: str = "/public_html/camera"
 
 
 @dataclass
@@ -48,20 +47,56 @@ class WordpressConfig:
 
 @dataclass
 class UploadConfig:
-    method: str = "sftp"
+    method: str = "ftp"
     sftp: SFTPConfig = field(default_factory=SFTPConfig)
     wordpress: WordpressConfig = field(default_factory=WordpressConfig)
 
 
 @dataclass
+class NtpConfig:
+    enabled: bool = True
+    server: str = "pool.ntp.org"
+
+
+@dataclass
 class AppConfig:
     auth: AuthConfig = field(default_factory=AuthConfig)
-    camera: CameraConfig = field(default_factory=CameraConfig)
+    cameras: list = field(default_factory=lambda: [
+        {"id": 1, "name": "Kamera 1", "rtsp_url": "", "enabled": True, "filename": "camera1.jpg"}
+    ])
+    capture_interval_minutes: int = 15
     upload: UploadConfig = field(default_factory=UploadConfig)
+    ntp: NtpConfig = field(default_factory=NtpConfig)
+    dark_periods: list = field(default_factory=list)
 
 
 def _chmod_600(path: Path) -> None:
     path.chmod(0o600)
+
+
+def _migrate_legacy(data: dict) -> dict:
+    """Migrate v1 config (single camera) to v2 (cameras list)."""
+    if "camera" in data and "cameras" not in data:
+        old = data.pop("camera")
+        data["cameras"] = [{
+            "id": 1,
+            "name": "Kamera 1",
+            "rtsp_url": old.get("rtsp_url", ""),
+            "enabled": True,
+            "filename": "camera1.jpg",
+        }]
+        data["capture_interval_minutes"] = old.get("capture_interval_minutes", 15)
+    if "ntp" not in data:
+        data["ntp"] = {"enabled": True, "server": "pool.ntp.org"}
+    if "dark_periods" not in data:
+        data["dark_periods"] = []
+    # Migrate remote_path → remote_dir
+    sftp = data.get("upload", {}).get("sftp", {})
+    if "remote_path" in sftp and "remote_dir" not in sftp:
+        import posixpath
+        old_path = sftp.pop("remote_path")
+        sftp["remote_dir"] = posixpath.dirname(old_path) or old_path
+    return data
 
 
 def load_config() -> AppConfig:
@@ -70,14 +105,20 @@ def load_config() -> AppConfig:
         save_config(cfg)
         return cfg
     data = json.loads(CONFIG_PATH.read_text())
+    data = _migrate_legacy(data)
+    ntp_data = data.get("ntp", {})
+    sftp_data = data.get("upload", {}).get("sftp", {})
     return AppConfig(
         auth=AuthConfig(**data.get("auth", {})),
-        camera=CameraConfig(**data.get("camera", {})),
+        cameras=data.get("cameras", []),
+        capture_interval_minutes=data.get("capture_interval_minutes", 15),
         upload=UploadConfig(
-            method=data.get("upload", {}).get("method", "sftp"),
-            sftp=SFTPConfig(**data.get("upload", {}).get("sftp", {})),
+            method=data.get("upload", {}).get("method", "ftp"),
+            sftp=SFTPConfig(**sftp_data),
             wordpress=WordpressConfig(**data.get("upload", {}).get("wordpress", {})),
         ),
+        ntp=NtpConfig(**ntp_data),
+        dark_periods=data.get("dark_periods", []),
     )
 
 

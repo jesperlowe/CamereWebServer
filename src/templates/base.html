@@ -17,10 +17,15 @@
     </svg>
     Camera Uploader
   </a>
-  <a href="/" {% if request.url.path == '/' %}class="active"{% endif %}>Dashboard</a>
-  <a href="/camera" {% if request.url.path == '/camera' %}class="active"{% endif %}>Kamera</a>
-  <a href="/upload" {% if request.url.path == '/upload' %}class="active"{% endif %}>Upload</a>
-  <a href="/logs" {% if request.url.path == '/logs' %}class="active"{% endif %}>Logs</a>
+  <a href="/"         {% if request.url.path == '/'         %}class="active"{% endif %}>Dashboard</a>
+  <a href="/cameras"  {% if request.url.path.startswith('/cameras') %}class="active"{% endif %}>Kameraer</a>
+  <a href="/upload"   {% if request.url.path == '/upload'   %}class="active"{% endif %}>Upload</a>
+  <a href="/schedule" {% if request.url.path == '/schedule' %}class="active"{% endif %}>Tidsplan</a>
+  <a href="/logs"     {% if request.url.path == '/logs'     %}class="active"{% endif %}>Logs</a>
+  <a href="/backup"   {% if request.url.path == '/backup'   %}class="active"{% endif %}>Backup</a>
+  <form method="post" action="/logout" style="margin-left:auto;">
+    <button type="submit" class="btn btn-secondary" style="padding:5px 12px;font-size:0.8rem;">Log ud</button>
+  </form>
 </nav>
 {% endblock %}
 
