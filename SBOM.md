@@ -1,6 +1,6 @@
 # Software Bill of Materials (SBOM)
 
-Generated for: **CamereWebServer version2**
+Generated for: **CameraWebService version2**
 
 ## Runtime Dependencies
 

@@ -19,7 +19,7 @@ Webinterface: `http://<pi-ip>:8080`
 ## Installation
 ```bash
 git clone <repo-url>
-cd CamereWebServer
+cd CameraWebService
 ./install.sh
 ```
 
