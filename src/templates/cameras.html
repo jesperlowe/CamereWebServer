@@ -58,8 +58,18 @@
 
   <form id="delete-{{ cam.id }}" method="post" action="/cameras/{{ cam.id }}/delete" style="display:none;"></form>
 
-  <!-- Per-camera pause schedule -->
-  <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
+  <!-- Pause schedule summary (managed on Schedule page) -->
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:0.83rem;color:var(--muted);">
+    {% set schedule = cam.pause_schedule %}
+    {% if schedule %}
+    {{ schedule|length }} pauseperiode(r) — <a href="/schedule" style="color:var(--accent);">redigér på Tidsplan-siden →</a>
+    {% else %}
+    Ingen pauseperioder — <a href="/schedule" style="color:var(--accent);">tilføj på Tidsplan-siden →</a>
+    {% endif %}
+  </div>
+
+  <!-- REMOVED pause schedule editor — now lives on /schedule -->
+  <div style="display:none;margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
     <div class="section-heading" style="margin-bottom:14px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>

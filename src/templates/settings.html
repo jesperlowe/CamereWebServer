@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Indstillinger{% endblock %}
+{% block title %}{{ _t('settings.title') }}{% endblock %}
 
 {% block content %}
 
@@ -9,36 +9,33 @@
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
-    Systemindstillinger
+    {{ _t('settings.title') }}
   </div>
 
   <form method="post" action="/settings">
     <div class="field">
       <label for="timezone">
-        Tidszone
-        <span class="hint">IANA tidszone — bruges til pauseskema og logs. Eks: Europe/Copenhagen, UTC, America/New_York</span>
+        {{ _t('settings.timezone') }}
+        <span class="hint">{{ _t('settings.timezone.hint') }}</span>
       </label>
       <input type="text" id="timezone" name="timezone"
-             value="{{ cfg.timezone }}" placeholder="Europe/Copenhagen"
-             style="max-width:320px;">
+             value="{{ cfg.timezone }}" placeholder="Europe/Copenhagen" style="max-width:320px;">
     </div>
 
     <div class="field">
       <label for="allowed_hosts">
-        Kendte hostnavne (dokumentation)
-        <span class="hint">Notér de adresser tjenesten tilgås via — fx <code>192.168.1.50</code>, <code>pi.local</code>, <code>camera.example.com</code>. Tjenesten accepterer forbindelser fra alle adresser automatisk (uvicorn lytter på 0.0.0.0). Bruges kun til reference.</span>
+        {{ _t('settings.hosts') }}
+        <span class="hint">{{ _t('settings.hosts.hint') }}</span>
       </label>
       <textarea id="allowed_hosts" name="allowed_hosts"
                 rows="4" style="font-family:monospace;font-size:0.88rem;">{{ cfg.allowed_hosts | join('\n') }}</textarea>
     </div>
 
-    <div class="alert" style="font-size:0.83rem;background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.25);color:var(--accent);margin-bottom:20px;">
-      Tjenesten er allerede tilgængelig via IP-adresse <em>og</em> hostname, så længe DNS eller mDNS
-      (<code>pi.local</code>) peger på Raspberry Pi'ens IP. Ingen ændringer i firewall/uvicorn er nødvendige.
-      Tidszone-ændringer træder i kraft ved næste optagelsescyklus.
+    <div class="alert" style="font-size:0.83rem;background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--muted);margin-bottom:20px;">
+      {{ _t('settings.timezone_note') }}
     </div>
 
-    <button type="submit" class="btn btn-primary">Gem indstillinger</button>
+    <button type="submit" class="btn btn-primary">{{ _t('settings.save') }}</button>
   </form>
 </div>
 
@@ -47,19 +44,27 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
     </svg>
-    Om systemet
+    {{ _t('settings.about') }}
   </div>
   <div class="status-row">
-    <span class="status-label">Version</span>
-    <span class="status-value">{{ APP_VERSION }}</span>
+    <span class="status-label">{{ _t('settings.version') }}</span>
+    <span class="status-value version-badge">v{{ APP_VERSION }}</span>
   </div>
   <div class="status-row">
-    <span class="status-label">Tidszone</span>
+    <span class="status-label">{{ _t('settings.timezone') }}</span>
     <span class="status-value">{{ cfg.timezone }}</span>
   </div>
   <div class="status-row">
-    <span class="status-label">Tilladte hosts</span>
-    <span class="status-value" style="font-family:monospace;">{{ cfg.allowed_hosts | join(', ') }}</span>
+    <span class="status-label">{{ _t('settings.hosts') }}</span>
+    <span class="status-value" style="font-family:monospace;font-size:0.85rem;">{{ cfg.allowed_hosts | join(', ') }}</span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">{{ _t('nav.language') }}</span>
+    <span class="status-value">{{ cfg.language }} — <a href="/language" style="color:var(--accent);">{{ _t('nav.language') }} →</a></span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">{{ _t('nav.network') }}</span>
+    <span class="status-value"><a href="/network" style="color:var(--accent);">{{ _t('network.title') }} →</a></span>
   </div>
 </div>
 

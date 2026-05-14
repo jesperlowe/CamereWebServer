@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}CameraWebService{% endblock %} — CameraWebService</title>
+  <title>{% block title %}{{ _t('app.title') }}{% endblock %} — {{ _t('app.title') }}</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
       <circle cx="12" cy="13" r="4"/>
     </svg>
-    CameraWebService
+    {{ _t('app.title') }}
   </a>
 
   <button class="nav-hamburger" id="nav-toggle" aria-label="Menu" aria-expanded="false">
@@ -23,15 +23,17 @@
   </button>
 
   <div class="nav-links" id="nav-links">
-    <a href="/"         {% if request.url.path == '/'         %}class="active"{% endif %}>Dashboard</a>
-    <a href="/cameras"  {% if request.url.path.startswith('/cameras') %}class="active"{% endif %}>Kameraer</a>
-    <a href="/upload"   {% if request.url.path == '/upload'   %}class="active"{% endif %}>Upload</a>
-    <a href="/schedule" {% if request.url.path == '/schedule' %}class="active"{% endif %}>Tidsplan</a>
-    <a href="/settings" {% if request.url.path == '/settings' %}class="active"{% endif %}>Indstillinger</a>
-    <a href="/logs"     {% if request.url.path == '/logs'     %}class="active"{% endif %}>Logs</a>
-    <a href="/backup"   {% if request.url.path == '/backup'   %}class="active"{% endif %}>Backup</a>
+    <a href="/"         {% if request.url.path == '/'         %}class="active"{% endif %}>{{ _t('nav.dashboard') }}</a>
+    <a href="/cameras"  {% if request.url.path.startswith('/cameras') %}class="active"{% endif %}>{{ _t('nav.cameras') }}</a>
+    <a href="/upload"   {% if request.url.path == '/upload'   %}class="active"{% endif %}>{{ _t('nav.upload') }}</a>
+    <a href="/schedule" {% if request.url.path == '/schedule' %}class="active"{% endif %}>{{ _t('nav.schedule') }}</a>
+    <a href="/settings" {% if request.url.path == '/settings' %}class="active"{% endif %}>{{ _t('nav.settings') }}</a>
+    <a href="/network"  {% if request.url.path == '/network'  %}class="active"{% endif %}>{{ _t('nav.network') }}</a>
+    <a href="/language" {% if request.url.path == '/language' %}class="active"{% endif %}>{{ _t('nav.language') }}</a>
+    <a href="/logs"     {% if request.url.path == '/logs'     %}class="active"{% endif %}>{{ _t('nav.logs') }}</a>
+    <a href="/backup"   {% if request.url.path == '/backup'   %}class="active"{% endif %}>{{ _t('nav.backup') }}</a>
     <form method="post" action="/logout">
-      <button type="submit" class="btn btn-secondary btn-sm">Log ud</button>
+      <button type="submit" class="btn btn-secondary btn-sm">{{ _t('nav.logout') }}</button>
     </form>
   </div>
 </nav>
@@ -42,7 +44,7 @@
 </div>
 
 <footer class="site-footer">
-  CameraWebService <span class="version-badge">v{{ APP_VERSION }}</span>
+  {{ _t('app.title') }} <span class="version-badge">v{{ APP_VERSION }}</span>
 </footer>
 
 <script>

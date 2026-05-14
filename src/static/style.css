@@ -461,3 +461,67 @@ select option {
   flex-wrap: wrap;
   margin-top: 20px;
 }
+
+/* ── Extra button sizes ── */
+.btn-xs {
+  padding: 3px 9px;
+  font-size: 0.78rem;
+}
+
+/* ── Schedule tables ── */
+.sched-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 0.88rem;
+}
+
+.sched-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.sched-table th {
+  text-align: left;
+  padding: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sched-table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.sched-table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.sched-table td.mono {
+  font-family: monospace;
+}
+
+.sched-table td.sched-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Status dot badge ── */
+.dot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+}
+
+.dot-status::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-status.dot-on::before  { background: #22c55e; }
+.dot-status.dot-off::before { background: var(--muted); }

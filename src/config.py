@@ -83,6 +83,7 @@ class AppConfig:
     dark_periods: list = field(default_factory=list)  # global fallback
     timezone: str = "Europe/Copenhagen"
     allowed_hosts: list = field(default_factory=lambda: ["*"])
+    language: str = "da"
 
 
 def _chmod_600(path: Path) -> None:
@@ -120,6 +121,8 @@ def _migrate_legacy(data: dict) -> dict:
         data["timezone"] = "Europe/Copenhagen"
     if "allowed_hosts" not in data:
         data["allowed_hosts"] = ["*"]
+    if "language" not in data:
+        data["language"] = "da"
 
     # Migrate remote_path → remote_dir
     sftp = data.get("upload", {}).get("sftp", {})
@@ -158,6 +161,7 @@ def load_config() -> AppConfig:
         dark_periods=data.get("dark_periods", []),
         timezone=data.get("timezone", "Europe/Copenhagen"),
         allowed_hosts=data.get("allowed_hosts", ["*"]),
+        language=data.get("language", "da"),
     )
 
 

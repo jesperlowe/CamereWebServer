@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Tidsplan{% endblock %}
+{% block title %}{{ _t('schedule.title') }}{% endblock %}
 
 {% block content %}
 
-<!-- NTP -->
+{# ── NTP ──────────────────────────────────────────────────────────────────── #}
 <div class="card">
   <div class="card-title">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
     </svg>
-    NTP Tidsstyring
+    {{ _t('schedule.ntp.title') }}
   </div>
 
   {% if ntp_state %}
   <div class="status-row" style="margin-bottom:16px;">
-    <span class="status-label">Seneste NTP-tjek</span>
+    <span class="status-label">{{ _t('schedule.ntp.last_check') }}</span>
     {% if ntp_state.ok %}
-    <span class="status-value ok">OK · offset {{ ntp_state.offset_sec }}s · {{ ntp_state.server_time }}</span>
+    <span class="status-value ok">{{ _t('schedule.ntp.ok') }} · {{ _t('schedule.ntp.offset') }} {{ ntp_state.offset_sec }}s · {{ ntp_state.server_time }}</span>
     {% else %}
-    <span class="status-value err">Fejl: {{ ntp_state.error }}</span>
+    <span class="status-value err">{{ _t('schedule.ntp.error') }}: {{ ntp_state.error }}</span>
     {% endif %}
   </div>
   {% endif %}
@@ -27,83 +27,66 @@
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
         <input type="checkbox" name="ntp_enabled" value="on"
-               {% if cfg.ntp.enabled %}checked{% endif %}
-               style="width:auto;margin:0;">
-        Aktiver NTP-tjek ved optagelse
+               {% if cfg.ntp.enabled %}checked{% endif %} style="width:auto;margin:0;">
+        {{ _t('schedule.ntp.enabled') }}
       </label>
     </div>
     <div class="field">
       <label for="ntp-server">
-        NTP-server
-        <span class="hint">Bruges til at verificere systemuret ved optagelse</span>
+        {{ _t('schedule.ntp.server') }}
+        <span class="hint">{{ _t('schedule.ntp.server.hint') }}</span>
       </label>
       <input type="text" id="ntp-server" name="ntp_server"
-             value="{{ cfg.ntp.server }}" placeholder="pool.ntp.org"
-             style="max-width:320px;">
+             value="{{ cfg.ntp.server }}" placeholder="pool.ntp.org" style="max-width:320px;">
     </div>
     <div class="action-row">
-      <button type="submit" class="btn btn-primary">Gem NTP-indstillinger</button>
+      <button type="submit" class="btn btn-primary">{{ _t('schedule.ntp.save') }}</button>
     </div>
   </form>
   <form method="post" action="/schedule/ntp/test" style="margin-top:10px;">
-    <button type="submit" class="btn btn-secondary">Test NTP nu</button>
+    <button type="submit" class="btn btn-secondary">{{ _t('schedule.ntp.test') }}</button>
   </form>
 </div>
 
-<!-- Mørketider -->
+{# ── Globale mørketider ───────────────────────────────────────────────────── #}
 <div class="card">
   <div class="card-title">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
-    Mørketider
+    {{ _t('schedule.dark.title') }}
   </div>
-  <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">
-    Automatisk optagelse stoppes i de angivne tidsintervaller. Støtter intervaller der går over midnat (fx 22:00–06:00).
-  </p>
+  <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">{{ _t('schedule.dark.description') }}</p>
 
-  <!-- Eksisterende perioder -->
   {% if cfg.dark_periods %}
-  <table style="width:100%;border-collapse:collapse;margin-bottom:24px;font-size:0.88rem;">
+  <table class="sched-table">
     <thead>
-      <tr style="border-bottom:1px solid var(--border);">
-        <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600;">Beskrivelse</th>
-        <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600;">Dag</th>
-        <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600;">Interval</th>
-        <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600;">Status</th>
-        <th style="padding:8px;"></th>
+      <tr>
+        <th>{{ _t('schedule.dark.col.description') }}</th>
+        <th>{{ _t('schedule.dark.col.day') }}</th>
+        <th>{{ _t('schedule.dark.col.interval') }}</th>
+        <th>{{ _t('schedule.dark.col.status') }}</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       {% for p in cfg.dark_periods %}
-      <tr style="border-bottom:1px solid var(--border);">
-        <td style="padding:10px 8px;">{{ p.label or '—' }}</td>
-        <td style="padding:10px 8px;">
-          {% if p.day == 'all' %}Alle dage
-          {% elif p.day == 'monday' %}Mandag
-          {% elif p.day == 'tuesday' %}Tirsdag
-          {% elif p.day == 'wednesday' %}Onsdag
-          {% elif p.day == 'thursday' %}Torsdag
-          {% elif p.day == 'friday' %}Fredag
-          {% elif p.day == 'saturday' %}Lørdag
-          {% elif p.day == 'sunday' %}Søndag
-          {% else %}{{ p.day }}{% endif %}
-        </td>
-        <td style="padding:10px 8px;font-family:monospace;">{{ p.start }} – {{ p.end }}</td>
-        <td style="padding:10px 8px;">
-          <span style="color:{% if p.enabled %}#22c55e{% else %}var(--muted){% endif %};">
-            {% if p.enabled %}Aktiv{% else %}Inaktiv{% endif %}
-          </span>
-        </td>
-        <td style="padding:10px 8px;display:flex;gap:6px;">
+      <tr>
+        <td>{{ p.label or '—' }}</td>
+        <td>{{ _t(day_key(p.day)) }}</td>
+        <td class="mono">{{ p.start }} – {{ p.end }}</td>
+        <td><span class="dot-status {% if p.enabled %}dot-on{% else %}dot-off{% endif %}">
+          {% if p.enabled %}{{ _t('status.active') }}{% else %}{{ _t('status.inactive') }}{% endif %}
+        </span></td>
+        <td class="sched-actions">
           <form method="post" action="/schedule/dark/{{ p.id }}/toggle">
-            <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:0.78rem;">
-              {% if p.enabled %}Deaktivér{% else %}Aktivér{% endif %}
+            <button type="submit" class="btn btn-secondary btn-xs">
+              {% if p.enabled %}{{ _t('status.disable') }}{% else %}{{ _t('status.enable') }}{% endif %}
             </button>
           </form>
           <form method="post" action="/schedule/dark/{{ p.id }}/delete">
-            <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:0.78rem;"
-                    onclick="return confirm('Slet denne mørketid?')">Slet</button>
+            <button type="submit" class="btn btn-danger btn-xs"
+                    onclick="return confirm('{{ _t('status.delete.confirm') }}')">{{ _t('status.delete') }}</button>
           </form>
         </td>
       </tr>
@@ -111,63 +94,134 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px;">Ingen mørketider defineret endnu.</p>
+  <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px;">{{ _t('schedule.dark.empty') }}</p>
   {% endif %}
 
-  <!-- Tilføj ny periode -->
-  <div class="section-heading">Tilføj mørketid</div>
+  <div class="section-heading" style="margin-top:20px;">{{ _t('schedule.dark.add') }}</div>
   <form method="post" action="/schedule/dark/add">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div class="field">
-        <label for="dark-label">
-          Beskrivelse
-          <span class="hint">Valgfri — fx "Nattetimer" eller "Lørdag morgen"</span>
-        </label>
-        <input type="text" id="dark-label" name="label" placeholder="Nattetimer">
+        <label>{{ _t('schedule.dark.label') }} <span class="hint">{{ _t('common.optional') }}</span></label>
+        <input type="text" name="label" placeholder="{{ _t('schedule.dark.label.placeholder') }}">
       </div>
       <div class="field">
-        <label for="dark-day">Dag</label>
-        <select id="dark-day" name="day">
-          <option value="all">Alle dage</option>
-          {% for wd in weekdays %}
-          <option value="{{ wd }}">
-            {% if wd == 'monday' %}Mandag
-            {% elif wd == 'tuesday' %}Tirsdag
-            {% elif wd == 'wednesday' %}Onsdag
-            {% elif wd == 'thursday' %}Torsdag
-            {% elif wd == 'friday' %}Fredag
-            {% elif wd == 'saturday' %}Lørdag
-            {% elif wd == 'sunday' %}Søndag
-            {% endif %}
-          </option>
+        <label>{{ _t('schedule.dark.day') }}</label>
+        <select name="day">
+          {% for wd in ['all'] + weekdays %}
+          <option value="{{ wd }}">{{ _t(day_key(wd)) }}</option>
           {% endfor %}
         </select>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div class="field">
-        <label for="dark-start">
-          Start
-          <span class="hint">Tidspunkt mørketiden begynder</span>
-        </label>
-        <input type="time" id="dark-start" name="start" value="22:00">
-      </div>
-      <div class="field">
-        <label for="dark-end">
-          Slut
-          <span class="hint">Tidspunkt mørketiden slutter</span>
-        </label>
-        <input type="time" id="dark-end" name="end" value="06:00">
-      </div>
+      <div class="field"><label>{{ _t('schedule.dark.start') }}</label><input type="time" name="start" value="22:00"></div>
+      <div class="field"><label>{{ _t('schedule.dark.end') }}</label><input type="time" name="end" value="06:00"></div>
     </div>
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
         <input type="checkbox" name="enabled" value="on" checked style="width:auto;margin:0;">
-        Aktivér med det samme
+        {{ _t('schedule.dark.activate_now') }}
       </label>
     </div>
-    <button type="submit" class="btn btn-primary">Tilføj mørketid</button>
+    <button type="submit" class="btn btn-primary">{{ _t('schedule.dark.add') }}</button>
   </form>
+</div>
+
+{# ── Per-kamera pauseskemaer ───────────────────────────────────────────────── #}
+<div class="card">
+  <div class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    {{ _t('schedule.cameras.title') }}
+  </div>
+  <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">{{ _t('schedule.cameras.description') }}</p>
+
+  {% for cam in cfg.cameras %}
+  <div style="margin-bottom:24px;{% if not loop.last %}border-bottom:1px solid var(--border);padding-bottom:24px;{% endif %}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      <span style="font-weight:600;font-size:0.95rem;">{{ cam.name }}</span>
+      <span style="font-size:0.75rem;color:var(--muted);">
+        {{ _t('schedule.cameras.interval') }}: {{ cam.capture_interval_minutes }} {{ _t('schedule.cameras.interval.unit') }}
+      </span>
+      <span style="font-size:0.75rem;color:{% if cam.enabled %}#22c55e{% else %}var(--muted){% endif %};">
+        {% if cam.enabled %}{{ _t('cameras.status.active') }}{% else %}{{ _t('cameras.status.inactive') }}{% endif %}
+      </span>
+    </div>
+
+    {% set schedule = cam.pause_schedule %}
+    {% if schedule %}
+    <table class="sched-table" style="margin-bottom:10px;">
+      <thead>
+        <tr>
+          <th>{{ _t('schedule.dark.col.description') }}</th>
+          <th>{{ _t('schedule.dark.col.day') }}</th>
+          <th>{{ _t('schedule.dark.col.interval') }}</th>
+          <th>{{ _t('schedule.dark.col.status') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in schedule %}
+        <tr>
+          <td>{{ p.label or '—' }}</td>
+          <td>{{ _t(day_key(p.day)) }}</td>
+          <td class="mono">{{ p.start }} – {{ p.end }}</td>
+          <td><span class="dot-status {% if p.enabled %}dot-on{% else %}dot-off{% endif %}">
+            {% if p.enabled %}{{ _t('status.active') }}{% else %}{{ _t('status.inactive') }}{% endif %}
+          </span></td>
+          <td class="sched-actions">
+            <form method="post" action="/cameras/{{ cam.id }}/pause/{{ p.id }}/toggle">
+              <button type="submit" class="btn btn-secondary btn-xs">
+                {% if p.enabled %}{{ _t('status.disable') }}{% else %}{{ _t('status.enable') }}{% endif %}
+              </button>
+            </form>
+            <form method="post" action="/cameras/{{ cam.id }}/pause/{{ p.id }}/delete">
+              <button type="submit" class="btn btn-danger btn-xs"
+                      onclick="return confirm('{{ _t('status.delete.confirm') }}')">{{ _t('status.delete') }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:8px;">{{ _t('schedule.cameras.pause.empty') }}</p>
+    {% endif %}
+
+    <details>
+      <summary style="cursor:pointer;font-size:0.84rem;color:var(--accent);user-select:none;">{{ _t('schedule.cameras.pause.add') }}</summary>
+      <form method="post" action="/cameras/{{ cam.id }}/pause/add" style="margin-top:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label>{{ _t('schedule.dark.label') }} <span class="hint">{{ _t('common.optional') }}</span></label>
+            <input type="text" name="label" placeholder="{{ _t('schedule.dark.label.placeholder') }}">
+          </div>
+          <div class="field">
+            <label>{{ _t('schedule.dark.day') }}</label>
+            <select name="day">
+              {% for wd in ['all'] + weekdays %}
+              <option value="{{ wd }}">{{ _t(day_key(wd)) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>{{ _t('schedule.dark.start') }}</label><input type="time" name="start" value="22:00"></div>
+          <div class="field"><label>{{ _t('schedule.dark.end') }}</label><input type="time" name="end" value="06:00"></div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" name="enabled" value="on" checked style="width:auto;margin:0;">
+            {{ _t('schedule.cameras.pause.activate') }}
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _t('schedule.cameras.pause.add') }}</button>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
 </div>
 
 {% endblock %}
