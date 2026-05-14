@@ -8,7 +8,11 @@ import bcrypt
 
 APP_VERSION = "3.0.0"
 
-CONFIG_PATH = Path(os.environ.get("CAMERA_UPLOADER_CONFIG", "/opt/camera-uploader/config.json"))
+CONFIG_PATH = Path(
+    os.environ.get("CAMERAWEBSERVICE_CONFIG")
+    or os.environ.get("CAMERA_UPLOADER_CONFIG")  # backward compat
+    or "/opt/CameraWebService/config.json"
+)
 
 MAX_CAMERAS = 5
 

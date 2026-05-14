@@ -1,0 +1,23 @@
+[Unit]
+Description=CameraWebService FastAPI Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=camerawebservice
+Group=camerawebservice
+WorkingDirectory=/opt/CameraWebService
+Environment=CAMERAWEBSERVICE_CONFIG=/opt/CameraWebService/config.json
+Environment=PYTHONPATH=/opt/CameraWebService
+ExecStart=/opt/CameraWebService/venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/CameraWebService
+
+[Install]
+WantedBy=multi-user.target
