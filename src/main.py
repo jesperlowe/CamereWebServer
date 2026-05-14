@@ -121,14 +121,14 @@ def _require_auth(request: Request) -> None:
 
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse("login.html", _tpl(request, {"error": None}))
 
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     cfg = load_config()
     if username != cfg.auth.username or not verify_password(password, cfg.auth.password_hash):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Forkert login"})
+        return templates.TemplateResponse("login.html", _tpl(request, {"error": "Forkert login"}))
     resp = RedirectResponse("/", status_code=302)
     resp.set_cookie(
         "session",
@@ -163,12 +163,11 @@ def change_password(request: Request, password: str = Form(...)):
 def dashboard(request: Request):
     _require_auth(request)
     cfg = load_config()
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "state": state,
+    return templates.TemplateResponse("dashboard.html", _tpl(request, {
+        "state":   state,
         "cameras": cfg.cameras,
-        "force": cfg.auth.force_password_change,
-    })
+        "force":   cfg.auth.force_password_change,
+    }))
 
 
 # ── Camera management ─────────────────────────────────────────────────────────
@@ -353,7 +352,7 @@ def api_cameras():
 def upload_page(request: Request):
     _require_auth(request)
     cfg = load_config()
-    return templates.TemplateResponse("upload.html", {"request": request, "cfg": cfg, "cameras": cfg.cameras})
+    return templates.TemplateResponse("upload.html", _tpl(request, {"cfg": cfg, "cameras": cfg.cameras}))
 
 
 @app.post("/upload")
@@ -618,16 +617,14 @@ async def backup_restore(request: Request, file: UploadFile = File(...)):
         cfg = xml_to_config(content)
         save_config(cfg)
         logger.info("Konfiguration genoprettet fra XML-backup.")
-        return templates.TemplateResponse("backup.html", {
-            "request": request,
+        return templates.TemplateResponse("backup.html", _tpl(request, {
             "success": "Konfigurationen er genoprettet. Genstart tjenesten hvis scheduleren ikke reagerer.",
-        })
+        }))
     except Exception as exc:
         logger.error("Backup-gendannelse fejlede: %s", exc)
-        return templates.TemplateResponse("backup.html", {
-            "request": request,
+        return templates.TemplateResponse("backup.html", _tpl(request, {
             "error": f"Kunne ikke læse backup-filen: {exc}",
-        })
+        }))
 
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
@@ -635,7 +632,7 @@ async def backup_restore(request: Request, file: UploadFile = File(...)):
 @app.get("/logs")
 def logs_page(request: Request):
     _require_auth(request)
-    return templates.TemplateResponse("logs.html", {"request": request, "logs": list(log_buffer)})
+    return templates.TemplateResponse("logs.html", _tpl(request, {"logs": list(log_buffer)}))
 
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
