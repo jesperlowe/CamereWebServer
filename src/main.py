@@ -14,10 +14,6 @@ from src.backup import config_to_xml, config_to_xml_no_auth, xml_to_config
 from src.capture import capture_snapshot
 from src.config import APP_VERSION, DEFAULT_INTERVAL, MAX_CAMERAS, WEEKDAYS, hash_password, load_config, save_config, verify_password
 from src.i18n import available_languages, day_key, get_translator
-from src.network import (
-    get_hostname, get_interfaces, has_root_permission,
-    read_dhcpcd_config, set_hostname, write_dhcpcd_config,
-)
 from src.ntp_sync import check_ntp
 from src.schedule_check import is_dark_time
 from src.uploader import upload_image
@@ -499,85 +495,6 @@ def save_settings(request: Request,
     save_config(cfg)
     logger.info("Systemindstillinger gemt. Genstart tjenesten for at anvende ændrede tilladte hosts.")
     return RedirectResponse("/settings", status_code=302)
-
-
-# ── Network ───────────────────────────────────────────────────────────────────
-
-@app.get("/network")
-def network_page(request: Request):
-    _require_auth(request)
-    ifaces = get_interfaces()
-    dhcp_configs = {iface["name"]: read_dhcpcd_config(iface["name"]) for iface in ifaces}
-    return templates.TemplateResponse("network.html", _tpl(request, {
-        "hostname":    get_hostname(),
-        "ifaces":      ifaces,
-        "dhcp_configs": dhcp_configs,
-        "can_write":   has_root_permission(),
-    }))
-
-
-@app.post("/network/hostname")
-def save_hostname(request: Request, hostname: str = Form(...)):
-    _require_auth(request)
-    t = get_translator(load_config().language)
-    try:
-        set_hostname(hostname.strip())
-        return templates.TemplateResponse("network.html", _tpl(request, {
-            "hostname":    hostname.strip(),
-            "ifaces":      get_interfaces(),
-            "dhcp_configs": {i["name"]: read_dhcpcd_config(i["name"]) for i in get_interfaces()},
-            "can_write":   has_root_permission(),
-            "hostname_success": t("network.hostname.success"),
-        }))
-    except ValueError:
-        return templates.TemplateResponse("network.html", _tpl(request, {
-            "hostname":    get_hostname(),
-            "ifaces":      get_interfaces(),
-            "dhcp_configs": {i["name"]: read_dhcpcd_config(i["name"]) for i in get_interfaces()},
-            "can_write":   has_root_permission(),
-            "hostname_error": t("network.hostname.invalid"),
-        }))
-    except Exception as exc:
-        return templates.TemplateResponse("network.html", _tpl(request, {
-            "hostname":    get_hostname(),
-            "ifaces":      get_interfaces(),
-            "dhcp_configs": {i["name"]: read_dhcpcd_config(i["name"]) for i in get_interfaces()},
-            "can_write":   has_root_permission(),
-            "hostname_error": t("network.hostname.error", error=str(exc)),
-        }))
-
-
-@app.post("/network/iface/{iface_name}/save")
-def save_iface(request: Request, iface_name: str,
-               mode: str = Form("dhcp"),
-               address: str = Form(""),
-               netmask: str = Form(""),
-               gateway: str = Form(""),
-               dns: str = Form("")):
-    _require_auth(request)
-    t = get_translator(load_config().language)
-    ifaces = get_interfaces()
-    dhcp_configs = {i["name"]: read_dhcpcd_config(i["name"]) for i in ifaces}
-    try:
-        write_dhcpcd_config(iface_name, mode, address, netmask, gateway, dns)
-        dhcp_configs[iface_name] = read_dhcpcd_config(iface_name)
-        return templates.TemplateResponse("network.html", _tpl(request, {
-            "hostname":    get_hostname(),
-            "ifaces":      ifaces,
-            "dhcp_configs": dhcp_configs,
-            "can_write":   has_root_permission(),
-            "iface_success": iface_name,
-            "iface_message": t("network.static.success"),
-        }))
-    except Exception as exc:
-        return templates.TemplateResponse("network.html", _tpl(request, {
-            "hostname":    get_hostname(),
-            "ifaces":      ifaces,
-            "dhcp_configs": dhcp_configs,
-            "can_write":   has_root_permission(),
-            "iface_error": iface_name,
-            "iface_message": t("network.static.error", error=str(exc)),
-        }))
 
 
 # ── Language ──────────────────────────────────────────────────────────────────
