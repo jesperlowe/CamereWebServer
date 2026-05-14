@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, File
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,14 +21,6 @@ app = FastAPI(title="CameraWebService")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 templates = Jinja2Templates(directory="src/templates")
 templates.env.globals["APP_VERSION"] = APP_VERSION
-
-
-def _rebuild_trusted_host_middleware():
-    """Re-attach TrustedHostMiddleware whenever allowed_hosts changes."""
-    cfg = load_config()
-    hosts = cfg.allowed_hosts or ["*"]
-    # Replace existing middleware stack entry — simplest approach is to store on app state
-    app.state.allowed_hosts = hosts
 
 
 def _get_serializer() -> URLSafeSerializer:
@@ -65,13 +56,8 @@ class BufferHandler(logging.Handler):
 logger.addHandler(BufferHandler())
 
 
-# ── Trusted-host middleware (reads allowed_hosts from config at startup) ───────
-
 @app.on_event("startup")
 async def startup_event():
-    cfg = load_config()
-    hosts = cfg.allowed_hosts or ["*"]
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
     threading.Thread(target=scheduler_loop, daemon=True).start()
 
 

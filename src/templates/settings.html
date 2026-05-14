@@ -25,20 +25,16 @@
 
     <div class="field">
       <label for="allowed_hosts">
-        Tilladte hostnavne (HTTP-adgang)
-        <span class="hint">Ét hostname pr. linje. Brug <code>*</code> for at tillade alle. Eks: <code>pi.local</code>, <code>192.168.1.50</code>, <code>camera.example.com</code>. Genstart tjenesten efter ændring.</span>
+        Kendte hostnavne (dokumentation)
+        <span class="hint">Notér de adresser tjenesten tilgås via — fx <code>192.168.1.50</code>, <code>pi.local</code>, <code>camera.example.com</code>. Tjenesten accepterer forbindelser fra alle adresser automatisk (uvicorn lytter på 0.0.0.0). Bruges kun til reference.</span>
       </label>
       <textarea id="allowed_hosts" name="allowed_hosts"
-                rows="5" style="font-family:monospace;font-size:0.88rem;">{{ cfg.allowed_hosts | join('\n') }}</textarea>
+                rows="4" style="font-family:monospace;font-size:0.88rem;">{{ cfg.allowed_hosts | join('\n') }}</textarea>
     </div>
 
-    <div class="alert" style="font-size:0.83rem;margin-bottom:20px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-           style="width:13px;height:13px;display:inline;margin-right:4px;vertical-align:middle;">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-      Ændringer i <strong>tilladte hostnavne</strong> kræver genstart af tjenesten for at træde i kraft.
+    <div class="alert" style="font-size:0.83rem;background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.25);color:var(--accent);margin-bottom:20px;">
+      Tjenesten er allerede tilgængelig via IP-adresse <em>og</em> hostname, så længe DNS eller mDNS
+      (<code>pi.local</code>) peger på Raspberry Pi'ens IP. Ingen ændringer i firewall/uvicorn er nødvendige.
       Tidszone-ændringer træder i kraft ved næste optagelsescyklus.
     </div>
 
