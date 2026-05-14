@@ -10,27 +10,83 @@ Henter snapshots fra RTSP/RTSPS-streams med `ffmpeg` og uploader direkte fra RAM
 - SD-kort 16 GB+
 - Netværk (Ethernet anbefales)
 
-## Klargøring af SD-kort
+## Samlet installationsvejledning
 
-1. Brug [Raspberry Pi Imager](https://www.raspberrypi.com/software/) med **Raspberry Pi OS Lite (64-bit)**.
-2. Aktivér SSH og angiv hostname/bruger under *Advanced options* i Imager.
-3. Boot Pi og find IP-adressen:
-   ```bash
-   hostname -I
-   ```
-   eller tjek DHCP-listen i din router.
+### Trin 1 — Klargør SD-kort
 
-## Installation
+1. Download og installer [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+2. Vælg **Raspberry Pi OS Lite (64-bit)** som operativsystem.
+3. Klik på tandhjulet (⚙) eller tryk **Ctrl+Shift+X** for at åbne *Advanced options*:
+   - Sæt hostname, fx `rpicam01`
+   - Aktivér SSH
+   - Angiv brugernavn og adgangskode, fx `admin` / dit-password
+   - Konfigurér WiFi hvis du ikke bruger Ethernet
+4. Skriv image til SD-kortet og sæt det i Pi'en.
+
+### Trin 2 — Find Pi'ens IP-adresse
+
+Boot Pi'en og find dens IP-adresse — enten fra din router eller via SSH-scan:
 
 ```bash
+# Fra en anden maskine på samme netværk:
+ping rpicam01.local
+
+# Eller find IP direkte på Pi'en (kræver skærm/tastatur):
+hostname -I
+```
+
+Opret SSH-forbindelse:
+
+```bash
+ssh admin@rpicam01.local
+# eller
+ssh admin@<ip-adresse>
+```
+
+### Trin 3 — Opdatér systemet og installér Git
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git
+```
+
+### Trin 4 — Hent koden
+
+```bash
+cd ~
 git clone https://github.com/jesperlowe/CameraWebService.git
 cd CameraWebService
+```
+
+### Trin 5 — Kør installationsscriptet
+
+```bash
 sudo bash install.sh
 ```
 
-`install.sh` opretter systembrugeren `camerawebservice`, installerer til `/opt/CameraWebService`, bygger et Python venv og starter tjenesten automatisk.
+Scriptet installerer automatisk:
+- Python 3, python3-venv og ffmpeg
+- Systembrugeren `camerawebservice`
+- Koden i `/opt/CameraWebService`
+- Et Python virtual environment med alle pakker
+- Systemd-servicen `CameraWebService` (starter ved boot)
 
-Webinterface åbnes på: `http://<pi-ip>:8080`
+Når installationen er færdig vises adressen til webinterfacet:
+
+```
+Webinterface: http://<pi-ip>:8080
+```
+
+### Trin 6 — Åbn webinterfacet
+
+Gå til `http://<pi-ip>:8080` i en browser.
+
+- Brugernavn: `admin`
+- Adgangskode: `admin`
+
+Du tvinges til at vælge en ny adgangskode ved første login.
+
+---
 
 ## Opdatering til ny version
 
