@@ -297,9 +297,19 @@ def test_camera(request: Request, cam_id: int):
     cam = next((c for c in cfg.cameras if c.get("id") == cam_id), None)
     if not cam:
         return RedirectResponse("/cameras", status_code=302)
-    img = capture_snapshot(cam["rtsp_url"])
-    state["cameras"].setdefault(cam_id, {})["last_image"] = img
-    state["cameras"][cam_id]["name"] = cam.get("name", "")
+    try:
+        img = capture_snapshot(cam["rtsp_url"])
+        state["cameras"].setdefault(cam_id, {}).update({
+            "last_image": img,
+            "name":       cam.get("name", ""),
+            "last_error": "-",
+        })
+    except Exception as exc:
+        logger.error("Snapshot fejlede for kamera '%s': %s", cam.get("name"), exc)
+        state["cameras"].setdefault(cam_id, {}).update({
+            "name":       cam.get("name", ""),
+            "last_error": str(exc),
+        })
     return RedirectResponse("/", status_code=302)
 
 
@@ -311,12 +321,19 @@ def upload_test_camera(request: Request, cam_id: int):
     if not cam:
         return RedirectResponse("/", status_code=302)
     cam_state = state["cameras"].get(cam_id, {})
-    img = cam_state.get("last_image") or capture_snapshot(cam["rtsp_url"])
-    upload_image(img, cfg, cam.get("filename", f"camera{cam_id}.jpg"))
-    state["cameras"].setdefault(cam_id, {}).update({
-        "last_upload": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "last_error": "-",
-    })
+    try:
+        img = cam_state.get("last_image") or capture_snapshot(cam["rtsp_url"])
+        upload_image(img, cfg, cam.get("filename", f"camera{cam_id}.jpg"))
+        state["cameras"].setdefault(cam_id, {}).update({
+            "last_upload": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "last_error": "-",
+        })
+    except Exception as exc:
+        logger.error("Upload-test fejlede for kamera '%s': %s", cam.get("name"), exc)
+        state["cameras"].setdefault(cam_id, {}).update({
+            "name":       cam.get("name", ""),
+            "last_error": str(exc),
+        })
     return RedirectResponse("/", status_code=302)
 
 
