@@ -89,13 +89,12 @@ def _chmod_600(path: Path) -> None:
     path.chmod(0o600)
 
 
-def _migrate_camera(cam: dict, global_interval: int, global_dark: list) -> dict:
+def _migrate_camera(cam: dict, global_interval: int) -> dict:
     """Ensure every camera dict has per-camera interval and pause_schedule."""
     if "capture_interval_minutes" not in cam:
         cam["capture_interval_minutes"] = global_interval
     if "pause_schedule" not in cam:
-        # Seed from global dark_periods on first migration so existing schedules carry over
-        cam["pause_schedule"] = list(global_dark)
+        cam["pause_schedule"] = []
     return cam
 
 
@@ -131,8 +130,7 @@ def _migrate_legacy(data: dict) -> dict:
 
     # v2 → v3: add per-camera fields
     global_interval = data.get("capture_interval_minutes", DEFAULT_INTERVAL)
-    global_dark = data.get("dark_periods", [])
-    data["cameras"] = [_migrate_camera(cam, global_interval, global_dark) for cam in data.get("cameras", [])]
+    data["cameras"] = [_migrate_camera(cam, global_interval) for cam in data.get("cameras", [])]
 
     return data
 

@@ -1,14 +1,14 @@
 import logging
 import threading
+import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from itsdangerous import URLSafeSerializer
+from itsdangerous import BadSignature, SignatureExpired, URLSafeSerializer
 
 from src.backup import config_to_xml, config_to_xml_no_auth, xml_to_config
 from src.capture import capture_snapshot
@@ -22,11 +22,6 @@ app.mount("/static", StaticFiles(directory="src/static"), name="static")
 templates = Jinja2Templates(directory="src/templates")
 templates.env.globals["APP_VERSION"] = APP_VERSION
 
-
-def _get_serializer() -> URLSafeSerializer:
-    return URLSafeSerializer(load_config().auth.session_secret)
-
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
@@ -34,6 +29,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger("camera_uploader")
 log_buffer = deque(maxlen=200)
+
+# ── Session serializer — cached so load_config() is not called on every request ──
+# Updated whenever the session secret is changed (password change or first save).
+_serializer: URLSafeSerializer | None = None
+
+
+def _get_serializer() -> URLSafeSerializer:
+    global _serializer
+    if _serializer is None:
+        _serializer = URLSafeSerializer(load_config().auth.session_secret)
+    return _serializer
+
+
+def _refresh_serializer() -> None:
+    """Call after any save_config() that may change auth.session_secret."""
+    global _serializer
+    _serializer = URLSafeSerializer(load_config().auth.session_secret)
+
 
 # Per-camera state keyed by camera id
 state = {
@@ -44,7 +57,7 @@ state = {
     "last_error": "-",
 }
 
-# Per-camera next-fire time (epoch seconds)
+# Per-camera next-fire time (monotonic seconds)
 _cam_next_fire: dict[int, float] = {}
 
 
@@ -58,6 +71,13 @@ logger.addHandler(BufferHandler())
 
 @app.on_event("startup")
 async def startup_event():
+    # Persist any migrated fields (e.g. session_secret) so auth survives restarts
+    try:
+        cfg = load_config()
+        save_config(cfg)
+    except Exception as exc:
+        logger.error("Kunne ikke gemme konfiguration ved opstart: %s", exc)
+    _refresh_serializer()
     threading.Thread(target=scheduler_loop, daemon=True).start()
 
 
@@ -69,7 +89,10 @@ def _authed(request: Request) -> bool:
         return False
     try:
         return bool(_get_serializer().loads(token).get("u"))
-    except Exception:
+    except (BadSignature, SignatureExpired):
+        return False
+    except Exception as exc:
+        logger.warning("Auth-fejl (uventet): %s", exc)
         return False
 
 
@@ -114,6 +137,7 @@ def change_password(request: Request, password: str = Form(...)):
     cfg.auth.password_hash = hash_password(password)
     cfg.auth.force_password_change = False
     save_config(cfg)
+    _refresh_serializer()
     return RedirectResponse("/", status_code=302)
 
 
@@ -504,7 +528,6 @@ def logs_page(request: Request):
 
 def _should_fire(cam_id: int, interval_minutes: int) -> bool:
     """True if enough time has elapsed for this camera to take a new snapshot."""
-    import time
     now = time.monotonic()
     next_fire = _cam_next_fire.get(cam_id, 0)
     if now >= next_fire:
@@ -514,7 +537,6 @@ def _should_fire(cam_id: int, interval_minutes: int) -> bool:
 
 
 def scheduler_loop():
-    import time
     while True:
         try:
             cfg = load_config()

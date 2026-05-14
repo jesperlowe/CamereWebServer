@@ -7,6 +7,7 @@ Treat the file as sensitive and store it securely.
 
 from __future__ import annotations
 
+import copy
 import xml.etree.ElementTree as ET
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from typing import Any
 from src.config import (
     AppConfig, AuthConfig, NtpConfig,
     SFTPConfig, UploadConfig, WordpressConfig,
-    load_config,
+    hash_password, load_config,
 )
 
 _VERSION = "3"
@@ -106,8 +107,6 @@ def config_to_xml(cfg: AppConfig) -> bytes:
 
 def config_to_xml_no_auth(cfg: AppConfig) -> bytes:
     """Export config without password hash, session secret or upload credentials."""
-    import copy
-    from src.config import hash_password
     safe = copy.deepcopy(cfg)
     safe.auth.password_hash = hash_password("CHANGE_ME")
     safe.auth.session_secret = ""
