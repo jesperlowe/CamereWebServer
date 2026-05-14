@@ -28,25 +28,34 @@
   </div>
 
   <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">
-    Henter alle indstillinger — kameraer, upload-konfiguration, mørketider og NTP-opsætning — som en XML-fil.
+    Henter alle indstillinger — kameraer, upload-konfiguration, pauseskema og NTP-opsætning — som en XML-fil.
   </p>
 
-  <div class="alert" style="margin-bottom:20px;font-size:0.85rem;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         style="width:14px;height:14px;display:inline;margin-right:5px;vertical-align:middle;">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-    </svg>
-    Filen indeholder adgangskoder og tokens. Opbevar den sikkert og del den ikke.
-  </div>
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="padding:18px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius);">
+      <div style="font-weight:600;margin-bottom:6px;font-size:0.9rem;">Fuld backup <span style="font-weight:400;color:var(--muted);font-size:0.82rem;">— inkl. adgangskoder og tokens</span></div>
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px;">Indeholder alt. Opbevar sikkert og del ikke. Bruges til at flytte installationen til nyt hardware.</p>
+      <a href="/backup/download" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download fuld backup (.xml)
+      </a>
+    </div>
 
-  <a href="/backup/download" class="btn btn-primary">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
-    Download konfiguration (.xml)
-  </a>
+    <div style="padding:18px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius);">
+      <div style="font-weight:600;margin-bottom:6px;font-size:0.9rem;">Backup uden adgangskoder <span style="font-weight:400;color:var(--muted);font-size:0.82rem;">— sikker at dele</span></div>
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:12px;">Adgangskoder, API-tokens og sessionnøgle er fjernet. Kan deles med support eller bruges til dokumentation. Kræver nyt password ved genoprettelse.</p>
+      <a href="/backup/download?strip_auth=1" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download backup uden adgangskoder (.xml)
+      </a>
+    </div>
+  </div>
 </div>
 
 <!-- Restore -->

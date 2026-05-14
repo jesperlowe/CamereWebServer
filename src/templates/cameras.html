@@ -3,28 +3,6 @@
 
 {% block content %}
 
-<!-- Optagelsesinterval -->
-<div class="card">
-  <div class="card-title">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-    </svg>
-    Optagelsesinterval
-  </div>
-  <form method="post" action="/cameras/interval">
-    <div class="field" style="max-width:200px;">
-      <label for="interval">
-        Minutter mellem snapshots
-        <span class="hint">Gælder for alle kameraer</span>
-      </label>
-      <input type="number" id="interval" name="interval"
-             value="{{ interval }}" min="1" max="1440">
-    </div>
-    <button type="submit" class="btn btn-primary">Gem</button>
-  </form>
-</div>
-
-<!-- Eksisterende kameraer -->
 {% for cam in cameras %}
 <div class="card">
   <div class="card-title">
@@ -41,29 +19,33 @@
   <form method="post" action="/cameras/{{ cam.id }}/save">
     <div class="field">
       <label for="name-{{ cam.id }}">Navn</label>
-      <input type="text" id="name-{{ cam.id }}" name="name"
-             value="{{ cam.name }}" required>
+      <input type="text" id="name-{{ cam.id }}" name="name" value="{{ cam.name }}" required>
     </div>
     <div class="field">
       <label for="rtsp-{{ cam.id }}">
         RTSP-stream URL
         <span class="hint">rtsp://bruger:kode@192.168.x.x:554/stream</span>
       </label>
-      <input type="text" id="rtsp-{{ cam.id }}" name="rtsp_url"
-             value="{{ cam.rtsp_url }}" placeholder="rtsp://…" autocomplete="off">
+      <input type="text" id="rtsp-{{ cam.id }}" name="rtsp_url" value="{{ cam.rtsp_url }}" placeholder="rtsp://…" autocomplete="off">
     </div>
     <div class="field">
       <label for="filename-{{ cam.id }}">
         Filnavn ved upload
-        <span class="hint">Filnavn på serveren (inkl. .jpg)</span>
+        <span class="hint">Hvert kamera skal have et unikt filnavn (.jpg)</span>
       </label>
-      <input type="text" id="filename-{{ cam.id }}" name="filename"
-             value="{{ cam.filename }}" placeholder="camera{{ cam.id }}.jpg" required>
+      <input type="text" id="filename-{{ cam.id }}" name="filename" value="{{ cam.filename }}" placeholder="camera{{ cam.id }}.jpg" required>
+    </div>
+    <div class="field" style="max-width:220px;">
+      <label for="interval-{{ cam.id }}">
+        Optagelsesinterval
+        <span class="hint">Minutter mellem snapshots for dette kamera</span>
+      </label>
+      <input type="number" id="interval-{{ cam.id }}" name="capture_interval_minutes"
+             value="{{ cam.capture_interval_minutes }}" min="1" max="1440">
     </div>
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
-        <input type="checkbox" name="enabled" value="on" {% if cam.enabled %}checked{% endif %}
-               style="width:auto;margin:0;">
+        <input type="checkbox" name="enabled" value="on" {% if cam.enabled %}checked{% endif %} style="width:auto;margin:0;">
         Aktiver kamera
       </label>
     </div>
@@ -75,6 +57,110 @@
   </form>
 
   <form id="delete-{{ cam.id }}" method="post" action="/cameras/{{ cam.id }}/delete" style="display:none;"></form>
+
+  <!-- Per-camera pause schedule -->
+  <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
+    <div class="section-heading" style="margin-bottom:14px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      Pauseskema for {{ cam.name }}
+      <span class="hint" style="font-weight:400;text-transform:none;letter-spacing:0;">Kameraet optager ikke i disse perioder</span>
+    </div>
+
+    {% set schedule = cam.pause_schedule %}
+    {% if schedule %}
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:0.85rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Beskrivelse</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Dag</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Interval</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;">Status</th>
+          <th style="padding:6px 8px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in schedule %}
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">{{ p.label or '—' }}</td>
+          <td style="padding:8px;">
+            {% if p.day == 'all' %}Alle dage
+            {% elif p.day == 'monday' %}Mandag
+            {% elif p.day == 'tuesday' %}Tirsdag
+            {% elif p.day == 'wednesday' %}Onsdag
+            {% elif p.day == 'thursday' %}Torsdag
+            {% elif p.day == 'friday' %}Fredag
+            {% elif p.day == 'saturday' %}Lørdag
+            {% elif p.day == 'sunday' %}Søndag
+            {% else %}{{ p.day }}{% endif %}
+          </td>
+          <td style="padding:8px;font-family:monospace;">{{ p.start }} – {{ p.end }}</td>
+          <td style="padding:8px;">
+            <span style="color:{% if p.enabled %}#22c55e{% else %}var(--muted){% endif %};">
+              {% if p.enabled %}Aktiv{% else %}Inaktiv{% endif %}
+            </span>
+          </td>
+          <td style="padding:8px;display:flex;gap:6px;">
+            <form method="post" action="/cameras/{{ cam.id }}/pause/{{ p.id }}/toggle">
+              <button type="submit" class="btn btn-secondary" style="padding:3px 9px;font-size:0.78rem;">
+                {% if p.enabled %}Deaktivér{% else %}Aktivér{% endif %}
+              </button>
+            </form>
+            <form method="post" action="/cameras/{{ cam.id }}/pause/{{ p.id }}/delete">
+              <button type="submit" class="btn btn-danger" style="padding:3px 9px;font-size:0.78rem;"
+                      onclick="return confirm('Slet denne pause?')">Slet</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">Ingen pauseperioder defineret — kameraet optager hele døgnet.</p>
+    {% endif %}
+
+    <details style="margin-top:8px;">
+      <summary style="cursor:pointer;font-size:0.85rem;color:var(--accent);user-select:none;">+ Tilføj pauseperiode</summary>
+      <form method="post" action="/cameras/{{ cam.id }}/pause/add" style="margin-top:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label>Beskrivelse <span class="hint">Valgfri</span></label>
+            <input type="text" name="label" placeholder="Nattetimer">
+          </div>
+          <div class="field">
+            <label>Dag</label>
+            <select name="day">
+              <option value="all">Alle dage</option>
+              {% for wd in weekdays %}
+              <option value="{{ wd }}">
+                {% if wd == 'monday' %}Mandag
+                {% elif wd == 'tuesday' %}Tirsdag
+                {% elif wd == 'wednesday' %}Onsdag
+                {% elif wd == 'thursday' %}Torsdag
+                {% elif wd == 'friday' %}Fredag
+                {% elif wd == 'saturday' %}Lørdag
+                {% elif wd == 'sunday' %}Søndag
+                {% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Start</label><input type="time" name="start" value="22:00"></div>
+          <div class="field"><label>Slut</label><input type="time" name="end" value="06:00"></div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" name="enabled" value="on" checked style="width:auto;margin:0;">
+            Aktivér med det samme
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Tilføj pause</button>
+      </form>
+    </details>
+  </div>
 </div>
 {% endfor %}
 
@@ -91,24 +177,19 @@
   <form method="post" action="/cameras/add">
     <div class="field">
       <label for="new-name">Navn</label>
-      <input type="text" id="new-name" name="name"
-             placeholder="Kamera {{ cameras|length + 1 }}" required>
+      <input type="text" id="new-name" name="name" placeholder="Kamera {{ cameras|length + 1 }}" required>
     </div>
     <div class="field">
-      <label for="new-rtsp">
-        RTSP-stream URL
-        <span class="hint">Kan udfyldes senere</span>
-      </label>
-      <input type="text" id="new-rtsp" name="rtsp_url"
-             placeholder="rtsp://…" autocomplete="off">
+      <label for="new-rtsp">RTSP-stream URL <span class="hint">Kan udfyldes senere</span></label>
+      <input type="text" id="new-rtsp" name="rtsp_url" placeholder="rtsp://…" autocomplete="off">
     </div>
     <div class="field">
-      <label for="new-filename">
-        Filnavn ved upload
-        <span class="hint">Hvert kamera skal have et unikt filnavn</span>
-      </label>
-      <input type="text" id="new-filename" name="filename"
-             placeholder="camera{{ cameras|length + 1 }}.jpg" required>
+      <label for="new-filename">Filnavn ved upload <span class="hint">Hvert kamera skal have et unikt filnavn</span></label>
+      <input type="text" id="new-filename" name="filename" placeholder="camera{{ cameras|length + 1 }}.jpg" required>
+    </div>
+    <div class="field" style="max-width:220px;">
+      <label for="new-interval">Optagelsesinterval <span class="hint">Minutter</span></label>
+      <input type="number" id="new-interval" name="capture_interval_minutes" value="15" min="1" max="1440">
     </div>
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">

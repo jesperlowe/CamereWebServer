@@ -1,4 +1,4 @@
-from datetime import datetime
+from __future__ import annotations
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -9,12 +9,24 @@ def _parse_minutes(t: str) -> int:
     return h * 60 + m
 
 
-def is_dark_time(dark_periods: list) -> tuple[bool, str]:
+def _now_in_tz(timezone_name: str):
+    """Return current datetime in the given IANA timezone (falls back to local time)."""
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        return datetime.now(ZoneInfo(timezone_name))
+    except Exception:
+        from datetime import datetime
+        return datetime.now()
+
+
+def is_dark_time(dark_periods: list, timezone_name: str = "Europe/Copenhagen") -> tuple[bool, str]:
     """
     Returns (True, reason) if the current time falls inside an enabled dark period,
     otherwise (False, "").  Supports overnight ranges (e.g. 22:00–06:00).
+    Timezone-aware when zoneinfo is available (Python 3.9+).
     """
-    now = datetime.now()
+    now = _now_in_tz(timezone_name)
     day_name = WEEKDAYS[now.weekday()]
     current = now.hour * 60 + now.minute
 

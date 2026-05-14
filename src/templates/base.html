@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Camera Uploader{% endblock %} — Camera Uploader</title>
+  <title>{% block title %}CameraWebService{% endblock %} — CameraWebService</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -15,17 +15,25 @@
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
       <circle cx="12" cy="13" r="4"/>
     </svg>
-    Camera Uploader
+    CameraWebService
   </a>
-  <a href="/"         {% if request.url.path == '/'         %}class="active"{% endif %}>Dashboard</a>
-  <a href="/cameras"  {% if request.url.path.startswith('/cameras') %}class="active"{% endif %}>Kameraer</a>
-  <a href="/upload"   {% if request.url.path == '/upload'   %}class="active"{% endif %}>Upload</a>
-  <a href="/schedule" {% if request.url.path == '/schedule' %}class="active"{% endif %}>Tidsplan</a>
-  <a href="/logs"     {% if request.url.path == '/logs'     %}class="active"{% endif %}>Logs</a>
-  <a href="/backup"   {% if request.url.path == '/backup'   %}class="active"{% endif %}>Backup</a>
-  <form method="post" action="/logout" style="margin-left:auto;">
-    <button type="submit" class="btn btn-secondary" style="padding:5px 12px;font-size:0.8rem;">Log ud</button>
-  </form>
+
+  <button class="nav-hamburger" id="nav-toggle" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+
+  <div class="nav-links" id="nav-links">
+    <a href="/"         {% if request.url.path == '/'         %}class="active"{% endif %}>Dashboard</a>
+    <a href="/cameras"  {% if request.url.path.startswith('/cameras') %}class="active"{% endif %}>Kameraer</a>
+    <a href="/upload"   {% if request.url.path == '/upload'   %}class="active"{% endif %}>Upload</a>
+    <a href="/schedule" {% if request.url.path == '/schedule' %}class="active"{% endif %}>Tidsplan</a>
+    <a href="/settings" {% if request.url.path == '/settings' %}class="active"{% endif %}>Indstillinger</a>
+    <a href="/logs"     {% if request.url.path == '/logs'     %}class="active"{% endif %}>Logs</a>
+    <a href="/backup"   {% if request.url.path == '/backup'   %}class="active"{% endif %}>Backup</a>
+    <form method="post" action="/logout">
+      <button type="submit" class="btn btn-secondary btn-sm">Log ud</button>
+    </form>
+  </div>
 </nav>
 {% endblock %}
 
@@ -33,5 +41,20 @@
   {% block content %}{% endblock %}
 </div>
 
+<footer class="site-footer">
+  CameraWebService <span class="version-badge">v{{ APP_VERSION }}</span>
+</footer>
+
+<script>
+(function () {
+  var toggle = document.getElementById('nav-toggle');
+  var links  = document.getElementById('nav-links');
+  if (!toggle || !links) return;
+  toggle.addEventListener('click', function () {
+    var open = links.classList.toggle('nav-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+})();
+</script>
 </body>
 </html>

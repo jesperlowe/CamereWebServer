@@ -4,26 +4,37 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, File
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
-from src.backup import config_to_xml, xml_to_config
+from src.backup import config_to_xml, config_to_xml_no_auth, xml_to_config
 from src.capture import capture_snapshot
-from src.config import MAX_CAMERAS, WEEKDAYS, hash_password, load_config, save_config, verify_password
+from src.config import APP_VERSION, DEFAULT_INTERVAL, MAX_CAMERAS, WEEKDAYS, hash_password, load_config, save_config, verify_password
 from src.ntp_sync import check_ntp
 from src.schedule_check import is_dark_time
 from src.uploader import upload_image
 
-app = FastAPI(title="Camera Uploader")
+app = FastAPI(title="CameraWebService")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 templates = Jinja2Templates(directory="src/templates")
+templates.env.globals["APP_VERSION"] = APP_VERSION
+
+
+def _rebuild_trusted_host_middleware():
+    """Re-attach TrustedHostMiddleware whenever allowed_hosts changes."""
+    cfg = load_config()
+    hosts = cfg.allowed_hosts or ["*"]
+    # Replace existing middleware stack entry — simplest approach is to store on app state
+    app.state.allowed_hosts = hosts
+
 
 def _get_serializer() -> URLSafeSerializer:
-    """Load session secret from config so each installation has a unique key."""
     return URLSafeSerializer(load_config().auth.session_secret)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +53,9 @@ state = {
     "last_error": "-",
 }
 
+# Per-camera next-fire time (epoch seconds)
+_cam_next_fire: dict[int, float] = {}
+
 
 class BufferHandler(logging.Handler):
     def emit(self, record):
@@ -51,7 +65,17 @@ class BufferHandler(logging.Handler):
 logger.addHandler(BufferHandler())
 
 
-# ── Auth helpers ─────────────────────────────────────────────────────────────
+# ── Trusted-host middleware (reads allowed_hosts from config at startup) ───────
+
+@app.on_event("startup")
+async def startup_event():
+    cfg = load_config()
+    hosts = cfg.allowed_hosts or ["*"]
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+
+
+# ── Auth helpers ──────────────────────────────────────────────────────────────
 
 def _authed(request: Request) -> bool:
     token = request.cookies.get("session")
@@ -132,16 +156,8 @@ def cameras_page(request: Request):
         "cameras": cfg.cameras,
         "interval": cfg.capture_interval_minutes,
         "max_cameras": MAX_CAMERAS,
+        "weekdays": WEEKDAYS,
     })
-
-
-@app.post("/cameras/interval")
-def save_interval(request: Request, interval: int = Form(...)):
-    _require_auth(request)
-    cfg = load_config()
-    cfg.capture_interval_minutes = max(1, interval)
-    save_config(cfg)
-    return RedirectResponse("/cameras", status_code=302)
 
 
 @app.post("/cameras/add")
@@ -149,7 +165,8 @@ def add_camera(request: Request,
                name: str = Form(...),
                rtsp_url: str = Form(""),
                filename: str = Form(...),
-               enabled: str = Form("off")):
+               enabled: str = Form("off"),
+               capture_interval_minutes: int = Form(DEFAULT_INTERVAL)):
     _require_auth(request)
     cfg = load_config()
     if len(cfg.cameras) >= MAX_CAMERAS:
@@ -161,6 +178,8 @@ def add_camera(request: Request,
         "rtsp_url": rtsp_url,
         "enabled": enabled == "on",
         "filename": filename or f"camera{next_id}.jpg",
+        "capture_interval_minutes": max(1, capture_interval_minutes),
+        "pause_schedule": [],
     })
     save_config(cfg)
     return RedirectResponse("/cameras", status_code=302)
@@ -171,15 +190,17 @@ def save_camera(request: Request, cam_id: int,
                 name: str = Form(...),
                 rtsp_url: str = Form(""),
                 filename: str = Form(...),
-                enabled: str = Form("off")):
+                enabled: str = Form("off"),
+                capture_interval_minutes: int = Form(DEFAULT_INTERVAL)):
     _require_auth(request)
     cfg = load_config()
     for cam in cfg.cameras:
         if cam.get("id") == cam_id:
-            cam["name"]     = name
-            cam["rtsp_url"] = rtsp_url
-            cam["filename"] = filename or cam["filename"]
-            cam["enabled"]  = enabled == "on"
+            cam["name"]                    = name
+            cam["rtsp_url"]               = rtsp_url
+            cam["filename"]               = filename or cam["filename"]
+            cam["enabled"]                = enabled == "on"
+            cam["capture_interval_minutes"] = max(1, capture_interval_minutes)
             break
     save_config(cfg)
     return RedirectResponse("/cameras", status_code=302)
@@ -190,6 +211,57 @@ def delete_camera(request: Request, cam_id: int):
     _require_auth(request)
     cfg = load_config()
     cfg.cameras = [c for c in cfg.cameras if c.get("id") != cam_id]
+    save_config(cfg)
+    return RedirectResponse("/cameras", status_code=302)
+
+
+# ── Per-camera pause schedule ─────────────────────────────────────────────────
+
+@app.post("/cameras/{cam_id}/pause/add")
+def add_cam_pause(request: Request, cam_id: int,
+                  label: str = Form(""),
+                  day: str = Form("all"),
+                  start: str = Form("22:00"),
+                  end: str = Form("06:00"),
+                  enabled: str = Form("off")):
+    _require_auth(request)
+    cfg = load_config()
+    for cam in cfg.cameras:
+        if cam.get("id") == cam_id:
+            schedule = cam.setdefault("pause_schedule", [])
+            next_id = max((p.get("id", 0) for p in schedule), default=0) + 1
+            schedule.append({
+                "id": next_id, "label": label, "day": day,
+                "start": start, "end": end, "enabled": enabled == "on",
+            })
+            break
+    save_config(cfg)
+    return RedirectResponse("/cameras", status_code=302)
+
+
+@app.post("/cameras/{cam_id}/pause/{period_id}/toggle")
+def toggle_cam_pause(request: Request, cam_id: int, period_id: int):
+    _require_auth(request)
+    cfg = load_config()
+    for cam in cfg.cameras:
+        if cam.get("id") == cam_id:
+            for p in cam.get("pause_schedule", []):
+                if p.get("id") == period_id:
+                    p["enabled"] = not p.get("enabled", True)
+                    break
+            break
+    save_config(cfg)
+    return RedirectResponse("/cameras", status_code=302)
+
+
+@app.post("/cameras/{cam_id}/pause/{period_id}/delete")
+def delete_cam_pause(request: Request, cam_id: int, period_id: int):
+    _require_auth(request)
+    cfg = load_config()
+    for cam in cfg.cameras:
+        if cam.get("id") == cam_id:
+            cam["pause_schedule"] = [p for p in cam.get("pause_schedule", []) if p.get("id") != period_id]
+            break
     save_config(cfg)
     return RedirectResponse("/cameras", status_code=302)
 
@@ -366,6 +438,29 @@ def delete_dark_period(request: Request, period_id: int):
     return RedirectResponse("/schedule", status_code=302)
 
 
+# ── System settings (timezone + allowed hosts) ────────────────────────────────
+
+@app.get("/settings")
+def settings_page(request: Request):
+    _require_auth(request)
+    cfg = load_config()
+    return templates.TemplateResponse("settings.html", {"request": request, "cfg": cfg})
+
+
+@app.post("/settings")
+def save_settings(request: Request,
+                  timezone: str = Form("Europe/Copenhagen"),
+                  allowed_hosts: str = Form("*")):
+    _require_auth(request)
+    cfg = load_config()
+    cfg.timezone = timezone.strip() or "Europe/Copenhagen"
+    hosts = [h.strip() for h in allowed_hosts.splitlines() if h.strip()]
+    cfg.allowed_hosts = hosts if hosts else ["*"]
+    save_config(cfg)
+    logger.info("Systemindstillinger gemt. Genstart tjenesten for at anvende ændrede tilladte hosts.")
+    return RedirectResponse("/settings", status_code=302)
+
+
 # ── Backup / Restore ──────────────────────────────────────────────────────────
 
 @app.get("/backup")
@@ -375,11 +470,15 @@ def backup_page(request: Request):
 
 
 @app.get("/backup/download")
-def backup_download(request: Request):
+def backup_download(request: Request, strip_auth: int = Query(0)):
     _require_auth(request)
     cfg = load_config()
-    xml_bytes = config_to_xml(cfg)
-    filename = datetime.now().strftime("backup_%Y%m%d_%H%M%S.xml")
+    if strip_auth:
+        xml_bytes = config_to_xml_no_auth(cfg)
+        filename = datetime.now().strftime("backup_no_auth_%Y%m%d_%H%M%S.xml")
+    else:
+        xml_bytes = config_to_xml(cfg)
+        filename = datetime.now().strftime("backup_%Y%m%d_%H%M%S.xml")
     return Response(
         content=xml_bytes,
         media_type="application/xml",
@@ -417,7 +516,19 @@ def logs_page(request: Request):
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
+def _should_fire(cam_id: int, interval_minutes: int) -> bool:
+    """True if enough time has elapsed for this camera to take a new snapshot."""
+    import time
+    now = time.monotonic()
+    next_fire = _cam_next_fire.get(cam_id, 0)
+    if now >= next_fire:
+        _cam_next_fire[cam_id] = now + interval_minutes * 60
+        return True
+    return False
+
+
 def scheduler_loop():
+    import time
     while True:
         try:
             cfg = load_config()
@@ -429,44 +540,46 @@ def scheduler_loop():
                 if not ntp_result["ok"]:
                     logger.warning("NTP-tjek fejlede: %s", ntp_result.get("error"))
 
-            # Dark period check
-            dark, reason = is_dark_time(cfg.dark_periods)
-            state["dark"] = dark
-            state["dark_reason"] = reason
-            if dark:
-                logger.info("Mørketid aktiv (%s) — springer over optagelse.", reason)
-            else:
-                for cam in cfg.cameras:
-                    if not cam.get("enabled"):
-                        continue
-                    rtsp = cam.get("rtsp_url", "")
-                    if not rtsp:
-                        continue
-                    cam_id = cam.get("id", 0)
-                    filename = cam.get("filename") or f"camera{cam_id}.jpg"
-                    try:
-                        img = capture_snapshot(rtsp)
-                        upload_image(img, cfg, filename)
-                        state["cameras"].setdefault(cam_id, {}).update({
-                            "name": cam.get("name", ""),
-                            "last_upload": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-                            "last_error": "-",
-                        })
-                    except Exception as exc:
-                        logger.error("Kamera '%s' fejl: %s", cam.get("name"), exc)
-                        state["cameras"].setdefault(cam_id, {}).update({
-                            "name": cam.get("name", ""),
-                            "last_error": str(exc),
-                        })
+            tz = cfg.timezone or "Europe/Copenhagen"
+
+            for cam in cfg.cameras:
+                if not cam.get("enabled"):
+                    continue
+                rtsp = cam.get("rtsp_url", "")
+                if not rtsp:
+                    continue
+                cam_id = cam.get("id", 0)
+                interval = max(1, cam.get("capture_interval_minutes", cfg.capture_interval_minutes))
+
+                if not _should_fire(cam_id, interval):
+                    continue
+
+                # Per-camera pause schedule (falls back to global dark_periods)
+                cam_schedule = cam.get("pause_schedule") or cfg.dark_periods
+                dark, reason = is_dark_time(cam_schedule, tz)
+                if dark:
+                    logger.info("Kamera '%s' pauseret (%s).", cam.get("name"), reason)
+                    continue
+
+                filename = cam.get("filename") or f"camera{cam_id}.jpg"
+                try:
+                    img = capture_snapshot(rtsp)
+                    upload_image(img, cfg, filename)
+                    state["cameras"].setdefault(cam_id, {}).update({
+                        "name": cam.get("name", ""),
+                        "last_upload": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+                        "last_error": "-",
+                    })
+                except Exception as exc:
+                    logger.error("Kamera '%s' fejl: %s", cam.get("name"), exc)
+                    state["cameras"].setdefault(cam_id, {}).update({
+                        "name": cam.get("name", ""),
+                        "last_error": str(exc),
+                    })
 
         except Exception as exc:
             logger.error("Scheduler fejl: %s", exc)
             state["last_error"] = str(exc)
         finally:
-            interval = max(load_config().capture_interval_minutes, 1)
-            threading.Event().wait(interval * 60)
-
-
-@app.on_event("startup")
-async def startup_event():
-    threading.Thread(target=scheduler_loop, daemon=True).start()
+            # Poll every 30 seconds; individual camera timers control actual fire rate
+            threading.Event().wait(30)
