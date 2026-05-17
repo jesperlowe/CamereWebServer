@@ -10,9 +10,6 @@ def capture_snapshot(rtsp_url: str, timeout_sec: int = 20) -> bytes:
     cmd = [
         "ffmpeg",
         "-loglevel", "warning",
-        # 10-second RTSP socket timeout — needed for older Hikvision firmware
-        # that is slow to complete the DESCRIBE/SETUP handshake over TCP.
-        "-stimeout", "10000000",
         "-rtsp_transport", "tcp",
         # Skip audio negotiation; older cameras sometimes reject the session
         # when ffmpeg tries to set up both video and audio tracks.
