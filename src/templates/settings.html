@@ -31,6 +31,16 @@
                 rows="4" style="font-family:monospace;font-size:0.88rem;">{{ cfg.allowed_hosts | join('\n') }}</textarea>
     </div>
 
+    <div class="field">
+      <label for="healthchecks_url">
+        {{ _t('settings.healthchecks.url') }}
+        <span class="hint">{{ _t('settings.healthchecks.url.hint') }}</span>
+      </label>
+      <input type="url" id="healthchecks_url" name="healthchecks_url"
+             value="{{ cfg.healthchecks_url }}"
+             placeholder="https://hc-ping.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+    </div>
+
     <div class="alert" style="font-size:0.83rem;background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--muted);margin-bottom:20px;">
       {{ _t('settings.timezone_note') }}
     </div>
@@ -61,6 +71,12 @@
   <div class="status-row">
     <span class="status-label">{{ _t('nav.language') }}</span>
     <span class="status-value">{{ cfg.language }} — <a href="/language" style="color:var(--accent);">{{ _t('nav.language') }} →</a></span>
+  </div>
+  <div class="status-row">
+    <span class="status-label">{{ _t('settings.healthchecks.url') }}</span>
+    <span class="status-value" style="font-family:monospace;font-size:0.82rem;">
+      {% if cfg.healthchecks_url %}{{ cfg.healthchecks_url }}{% else %}<span style="color:var(--muted);">—</span>{% endif %}
+    </span>
   </div>
   <div class="status-row">
     <span class="status-label">Netværksstyring</span>

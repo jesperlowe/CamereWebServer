@@ -9,16 +9,18 @@ def capture_snapshot(rtsp_url: str, timeout_sec: int = 20) -> bytes:
         raise ValueError("RTSP URL er ikke konfigureret.")
     cmd = [
         "ffmpeg",
-        "-rtsp_transport",
-        "tcp",
-        "-i",
-        rtsp_url,
-        "-frames:v",
-        "1",
-        "-f",
-        "image2pipe",
-        "-vcodec",
-        "mjpeg",
+        "-loglevel", "warning",
+        # 10-second RTSP socket timeout — needed for older Hikvision firmware
+        # that is slow to complete the DESCRIBE/SETUP handshake over TCP.
+        "-stimeout", "10000000",
+        "-rtsp_transport", "tcp",
+        # Skip audio negotiation; older cameras sometimes reject the session
+        # when ffmpeg tries to set up both video and audio tracks.
+        "-allowed_media_types", "video",
+        "-i", rtsp_url,
+        "-frames:v", "1",
+        "-f", "image2pipe",
+        "-vcodec", "mjpeg",
         "pipe:1",
     ]
     try:
@@ -28,6 +30,11 @@ def capture_snapshot(rtsp_url: str, timeout_sec: int = 20) -> bytes:
         raise RuntimeError("Timeout ved hentning af billede fra kamera.") from exc
 
     if proc.returncode != 0 or not proc.stdout:
-        logger.error("ffmpeg fejl ved capture (kode=%s).", proc.returncode)
+        stderr_snippet = proc.stderr.decode(errors="replace").strip()[-400:]
+        logger.error(
+            "ffmpeg fejl ved capture (kode=%s).\n%s",
+            proc.returncode,
+            stderr_snippet,
+        )
         raise RuntimeError("Kunne ikke hente billede fra stream. Kontrollér RTSP URL og login.")
     return proc.stdout

@@ -25,6 +25,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _LANG_DIR = Path(__file__).parent.parent / "language"
+LANG_DIR = _LANG_DIR  # public alias for use by main.py
 
 # In-memory cache:  locale → {"meta": {...}, "translations": {...}}
 _cache: dict[str, dict] = {}
@@ -96,6 +97,11 @@ def get_translator(locale: str):
         return val
 
     return t
+
+
+def invalidate_cache(locale: str) -> None:
+    """Remove a locale from the in-memory cache so it reloads from disk on next access."""
+    _cache.pop(locale, None)
 
 
 def day_key(day: str) -> str:

@@ -1,6 +1,6 @@
 # CameraWebService
 
-**Version 3.1** — Webbaseret kameraservice til Raspberry Pi.
+**Version 3.1.0** — Webbaseret kameraservice til Raspberry Pi.
 
 Henter snapshots fra RTSP/RTSPS-streams med `ffmpeg` og uploader direkte fra RAM (ingen permanent lokal JPG-fil). Integrerer med Track Status Light Server via en offentlig kamera-URL.
 
@@ -111,8 +111,8 @@ Du tvinges til at vælge en ny adgangskode ved første login.
 | **Kameraer** | Tilføj/ret kameraer — RTSP-URL, filnavn, optagelsesinterval |
 | **Upload** | FTP/SFTP/WordPress upload-konfiguration og offentlig URL |
 | **Tidsplan** | NTP-opsætning, globale pausetider og per-kamera pauseskemaer |
-| **Indstillinger** | Tidszone og kendte hostnavne |
-| **Sprog** | Skift mellem dansk og engelsk (eller tilføj nye sprogfiler) |
+| **Indstillinger** | Tidszone, kendte hostnavne og Healthchecks.io |
+| **Sprog** | Skift sprog, upload og download sprogfiler |
 | **Logs** | Applikationslog direkte i browseren |
 | **Backup** | Download/genopret konfiguration som XML |
 
@@ -131,9 +131,26 @@ Cockpit åbnes på: `http://<pi-ip>:9090`
 
 Her kan du ændre hostname, konfigurere statisk IP, overvåge CPU/RAM og styre services — alt fra browseren.
 
+## Lyst og mørkt tema
+
+Klik på solen/måne-ikonet øverst i navigationen for at skifte mellem mørkt og lyst tema. Valget gemmes i browseren (localStorage) og huskes på tværs af sessioner.
+
+## Healthchecks.io
+
+Under **Indstillinger** kan du angive en [healthchecks.io](https://healthchecks.io/) ping-URL. Tjenesten sender automatisk et ping efter hvert vellykket kamera-upload og pinger `/fail`-URL'en ved fejl. Dette giver overvågning og notifikationer hvis kameraet holder op med at uploade.
+
+```
+https://hc-ping.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
 ## Sprogfiler
 
-Sprogfiler ligger i mappen `language/`. Tilføj en ny fil `language/xx.json` (se `da.json` som skabelon) for at gøre et nyt sprog tilgængeligt i **Sprog**-fanen. Filen skal indeholde felterne `version`, `locale`, `name`, `nativeName`, `fallback` og `translations`.
+Sprogfiler ligger i mappen `language/`. Du kan administrere dem direkte fra **Sprog**-fanen i web-UI'et:
+
+- **Download** — Hent en eksisterende sprogfil som `.json` og brug den som skabelon.
+- **Upload** — Upload en ny eller redigeret `.json`-sprogfil direkte til serveren uden SSH.
+
+Manuelt: tilføj en ny fil `language/xx.json` (se `da.json` som skabelon). Filen skal indeholde felterne `version`, `locale`, `name`, `nativeName`, `fallback` og `translations`.
 
 ## FTP/SFTP upload
 

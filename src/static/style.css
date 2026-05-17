@@ -525,3 +525,64 @@ select option {
 
 .dot-status.dot-on::before  { background: #22c55e; }
 .dot-status.dot-off::before { background: var(--muted); }
+
+/* ── Light theme ── */
+[data-theme="light"] {
+  --bg:       #f1f5f9;
+  --surface:  #ffffff;
+  --border:   #e2e8f0;
+  --accent:   #2563eb;
+  --accent-h: #1d4ed8;
+  --danger:   #dc2626;
+  --text:     #0f172a;
+  --muted:    #64748b;
+}
+
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="url"],
+[data-theme="light"] input[type="time"],
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: #f8fafc;
+  color: var(--text);
+}
+
+[data-theme="light"] select option {
+  background: var(--surface);
+}
+
+[data-theme="light"] .btn-secondary { background: #e2e8f0; color: var(--text); }
+[data-theme="light"] .btn-secondary:hover { background: #cbd5e1; }
+
+[data-theme="light"] .log-output {
+  background: #f8fafc;
+  color: #334155;
+}
+
+[data-theme="light"] .nav-links a:hover,
+[data-theme="light"] .nav-links a.active {
+  background: rgba(37,99,235,0.1);
+}
+
+/* ── Theme toggle button ── */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover { background: rgba(59,130,246,0.12); color: var(--text); }
+.theme-toggle svg   { width: 18px; height: 18px; }
+.theme-toggle .icon-sun  { display: none; }
+.theme-toggle .icon-moon { display: block; }
+[data-theme="light"] .theme-toggle .icon-sun  { display: block; }
+[data-theme="light"] .theme-toggle .icon-moon { display: none; }

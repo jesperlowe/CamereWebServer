@@ -1,9 +1,12 @@
+import json as _json
 import logging
+import re
 import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -13,7 +16,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeSerializer
 from src.backup import config_to_xml, config_to_xml_no_auth, xml_to_config
 from src.capture import capture_snapshot
 from src.config import APP_VERSION, DEFAULT_INTERVAL, MAX_CAMERAS, WEEKDAYS, hash_password, load_config, save_config, verify_password
-from src.i18n import available_languages, day_key, get_translator
+from src.i18n import available_languages, day_key, get_translator, invalidate_cache, LANG_DIR
 from src.ntp_sync import check_ntp
 from src.schedule_check import is_dark_time
 from src.uploader import upload_image
@@ -48,6 +51,17 @@ def _refresh_serializer() -> None:
     """Call after any save_config() that may change auth.session_secret."""
     global _serializer
     _serializer = URLSafeSerializer(load_config().auth.session_secret)
+
+
+def _ping_healthchecks(url: str, fail: bool = False) -> None:
+    """Fire-and-forget GET to a healthchecks.io check URL. Silently ignored if url is empty."""
+    if not url:
+        return
+    target = f"{url.rstrip('/')}/fail" if fail else url
+    try:
+        httpx.get(target, timeout=5)
+    except Exception as exc:
+        logger.warning("Healthchecks ping fejlede (%s): %s", target, exc)
 
 
 # Per-camera state keyed by camera id
@@ -486,12 +500,14 @@ def settings_page(request: Request):
 @app.post("/settings")
 def save_settings(request: Request,
                   timezone: str = Form("Europe/Copenhagen"),
-                  allowed_hosts: str = Form("*")):
+                  allowed_hosts: str = Form("*"),
+                  healthchecks_url: str = Form("")):
     _require_auth(request)
     cfg = load_config()
     cfg.timezone = timezone.strip() or "Europe/Copenhagen"
     hosts = [h.strip() for h in allowed_hosts.splitlines() if h.strip()]
     cfg.allowed_hosts = hosts if hosts else ["*"]
+    cfg.healthchecks_url = healthchecks_url.strip()
     save_config(cfg)
     logger.info("Systemindstillinger gemt. Genstart tjenesten for at anvende ændrede tilladte hosts.")
     return RedirectResponse("/settings", status_code=302)
@@ -515,6 +531,47 @@ def save_language(request: Request, language: str = Form("da")):
     cfg = load_config()
     cfg.language = language.strip() or "da"
     save_config(cfg)
+    return RedirectResponse("/language", status_code=302)
+
+
+@app.get("/language/download/{locale}")
+def download_language_file(request: Request, locale: str):
+    _require_auth(request)
+    if not re.match(r'^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})?$', locale):
+        raise HTTPException(status_code=400, detail="Ugyldigt locale")
+    path = LANG_DIR / f"{locale}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sprogfil ikke fundet")
+    return Response(
+        content=path.read_bytes(),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{locale}.json"'},
+    )
+
+
+@app.post("/language/upload")
+async def upload_language_file(request: Request, file: UploadFile = File(...)):
+    _require_auth(request)
+    content = await file.read()
+    try:
+        data = _json.loads(content)
+        if not isinstance(data.get("translations"), dict):
+            raise ValueError("Mangler 'translations' felt")
+        locale = str(data.get("locale", "")).strip()
+        if not re.match(r'^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})?$', locale):
+            raise ValueError(f"Ugyldigt locale: {locale!r}")
+        LANG_DIR.mkdir(parents=True, exist_ok=True)
+        (LANG_DIR / f"{locale}.json").write_text(content.decode("utf-8"), encoding="utf-8")
+        invalidate_cache(locale)
+        logger.info("Sprogfil '%s' uploaded og cachen nulstillet.", locale)
+    except Exception as exc:
+        logger.error("Sprogfil upload fejlede: %s", exc)
+        cfg = load_config()
+        return templates.TemplateResponse("language.html", _tpl(request, {
+            "current_language": cfg.language,
+            "languages":        available_languages(),
+            "upload_error":     str(exc),
+        }))
     return RedirectResponse("/language", status_code=302)
 
 
@@ -623,12 +680,14 @@ def scheduler_loop():
                         "last_upload": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
                         "last_error": "-",
                     })
+                    _ping_healthchecks(cfg.healthchecks_url)
                 except Exception as exc:
                     logger.error("Kamera '%s' fejl: %s", cam.get("name"), exc)
                     state["cameras"].setdefault(cam_id, {}).update({
                         "name": cam.get("name", ""),
                         "last_error": str(exc),
                     })
+                    _ping_healthchecks(cfg.healthchecks_url, fail=True)
 
         except Exception as exc:
             logger.error("Scheduler fejl: %s", exc)

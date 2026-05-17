@@ -6,7 +6,7 @@ from pathlib import Path
 
 import bcrypt
 
-APP_VERSION = "3.0.0"
+APP_VERSION = "3.1.0"
 
 CONFIG_PATH = Path(
     os.environ.get("CAMERAWEBSERVICE_CONFIG")
@@ -88,6 +88,7 @@ class AppConfig:
     timezone: str = "Europe/Copenhagen"
     allowed_hosts: list = field(default_factory=lambda: ["*"])
     language: str = "da"
+    healthchecks_url: str = ""  # optional healthchecks.io ping URL
 
 
 def _chmod_600(path: Path) -> None:
@@ -127,6 +128,8 @@ def _migrate_legacy(data: dict) -> dict:
         data["allowed_hosts"] = ["*"]
     if "language" not in data:
         data["language"] = "da"
+    if "healthchecks_url" not in data:
+        data["healthchecks_url"] = ""
 
     # Migrate remote_path → remote_dir
     sftp = data.get("upload", {}).get("sftp", {})
@@ -166,6 +169,7 @@ def load_config() -> AppConfig:
         timezone=data.get("timezone", "Europe/Copenhagen"),
         allowed_hosts=data.get("allowed_hosts", ["*"]),
         language=data.get("language", "da"),
+        healthchecks_url=data.get("healthchecks_url", ""),
     )
 
 
